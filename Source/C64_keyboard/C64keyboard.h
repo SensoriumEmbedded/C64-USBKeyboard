@@ -22,17 +22,12 @@
 */
 
 
-//#ifndef C64keyboard_h
-//#define C64keyboard_h
-
-
 //MT88xx control pins
 #define ANALOG_SW_DATA         0 // Sets selected cross switch on/off (Default 0)
 #define ANALOG_SW_STROBE       2 // Strobe timing pulse (Default 2)
 #define ANALOG_SW_RESET       10 // Reset all MT88XX cross switches to off (Default 10)
 #define ANALOG_SW_ARRAY_START  3 // First pin of 6 bit switch addressing. AY2-0 & AX2-0 (Default 3)
 #define ANALOG_SW_ARRAY_END    8 // Last pin of 6 bit switch addressing. AY2-0 & AX2-0 (Default 8)
-#define ANALOG_SW_AX3          9 // Pin that controls AX3 (MT8812 & MT8816) (Default 9)
 #define NMI_PIN                1 // NMI (RESTORE) KEY PIN (Default 1)
 #define INDICATOR_LED         13 // LED on the Teensy
 

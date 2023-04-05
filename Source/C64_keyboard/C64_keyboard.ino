@@ -27,24 +27,22 @@
 USBHost usb;
 KeyboardController keyboard(usb);
 
-static volatile uint8_t kc,mod, modbuff;
-static volatile bool capslock=false,kpress=false; 
+static volatile uint8_t KeyCode,mod, modbuff;
+static volatile bool capslock=false,KeyIsPressed=false; 
 
 void setup() {
-  pinMode(INDICATOR_LED, OUTPUT); // show traffic
-  digitalWrite(INDICATOR_LED, HIGH);
   
   usb.begin();
 
   // initialize the pins
   for ( int currentPin = ANALOG_SW_ARRAY_START; currentPin <= ANALOG_SW_ARRAY_END; ++currentPin) pinMode( currentPin, OUTPUT);
-  pinMode( ANALOG_SW_STROBE, OUTPUT);  // MT88XX strobe
-  pinMode( ANALOG_SW_DATA, OUTPUT);   // MT88XX data
+  pinMode( ANALOG_SW_STROBE, OUTPUT);// MT88XX strobe
+  pinMode( ANALOG_SW_DATA, OUTPUT);  // MT88XX data
   pinMode( ANALOG_SW_RESET, OUTPUT); // MT88XX reset
-  pinMode(ANALOG_SW_DATA, OUTPUT);  //MT88XX data
-  pinMode(NMI_PIN, OUTPUT); // C64 NMI
+  pinMode( NMI_PIN, OUTPUT);         // C64 NMI (RESTORE)
+  pinMode(INDICATOR_LED, OUTPUT);
+  digitalWrite(INDICATOR_LED, HIGH);
   
-  //if (!MT8808){pinMode( ANALOG_SW_AX3, OUTPUT);}  // ANALOG_SW_AX3 (AX3) is separate as it is used only for conversion of X12/X13 into X6/X7
   resetMT88();
 
   keyboard.attachPress(keyPressed);
@@ -62,68 +60,60 @@ void loop()
 
 void keyPressed() {
   digitalWrite(INDICATOR_LED, HIGH);
-  kc = keyboard.getOemKey();
+  KeyCode = keyboard.getOemKey();
   mod = keyboard.getModifiers();
-  kpress = true;
+  KeyIsPressed = true;
   Serial.print("Press==");
-  c64key();
+  ConvToC64Key();
   //digitalWrite(INDICATOR_LED, LOW);
 }
 
 void keyReleased() {
   //digitalWrite(INDICATOR_LED, HIGH);
-  kc = keyboard.getOemKey();
+  KeyCode = keyboard.getOemKey();
   mod = keyboard.getModifiers();
-  kpress = false;
+  KeyIsPressed = false;
   Serial.print("Release");
-  c64key();
+  ConvToC64Key();
   digitalWrite(INDICATOR_LED, LOW);
 }
 
 void resetMT88(void) 
 {
-  digitalWrite(ANALOG_SW_DATA , LOW);
-  digitalWrite(ANALOG_SW_RESET, HIGH);
-  digitalWrite( ANALOG_SW_STROBE, HIGH);
-  digitalWrite(ANALOG_SW_RESET, LOW);
-  digitalWrite( ANALOG_SW_STROBE, LOW);
-  digitalWrite(ANALOG_SW_DATA , HIGH);
+  digitalWrite(ANALOG_SW_DATA  ,  LOW);
+  digitalWrite(ANALOG_SW_RESET , HIGH);
+  digitalWrite(ANALOG_SW_STROBE, HIGH);
+  digitalWrite(ANALOG_SW_RESET ,  LOW);
+  digitalWrite(ANALOG_SW_STROBE,  LOW);
+  digitalWrite(ANALOG_SW_DATA  , HIGH);
   capslock = false;
   modbuff =0;
-  kpress=false;
+  KeyIsPressed=false;
 }
 
-void setswitch(uint8_t c,bool kstate){
-  int bitr;
-  bool state;
-  digitalWrite(ANALOG_SW_DATA , kstate);
-  // Fix logic table hole in MT8812/16
-  // Convert x12 & x13 to x6 & x7. AX3 line control
-  //if ( !MT8808 &&( (c > 55 && c < 64) || (c > 23 && c < 32 ))) {
-  //   c -= 24;
-  //  digitalWrite(ANALOG_SW_AX3, HIGH);
-  //}
+void setswitch(uint8_t C64KeyMap,bool KeyState){
+  bool BitState;
+  digitalWrite(ANALOG_SW_DATA , KeyState);
     
-  if (c < 64) {
+  if (C64KeyMap < 64) {
     //set the address:
-    for ( int currentPin = ANALOG_SW_ARRAY_START; currentPin <= ANALOG_SW_ARRAY_END; ++currentPin) {
-      bitr = (currentPin - ANALOG_SW_ARRAY_START);
-      state =  bitRead(c, bitr);
-      digitalWrite(currentPin, state);
+    for ( int currentPin = ANALOG_SW_ARRAY_START; currentPin <= ANALOG_SW_ARRAY_END; ++currentPin) 
+    {
+      BitState = bitRead(C64KeyMap, (currentPin - ANALOG_SW_ARRAY_START));
+      digitalWrite(currentPin, BitState);
     }
     digitalWrite( ANALOG_SW_STROBE, HIGH);
     digitalWrite( ANALOG_SW_STROBE, LOW);
   }
-  //if (!MT8808){digitalWrite(ANALOG_SW_AX3, LOW);}
   
   // Reset switch state pin to default high state (Key press).
   digitalWrite(ANALOG_SW_DATA , HIGH);
-  Serial.printf ("  *Switch: C64 Keycode: %d, State: %d\n", c, kstate);
+  Serial.printf ("  *Switch: C64 KeyMap: %d, State: %d\n", C64KeyMap, KeyState);
 }
       
-void c64key() {
-   
-   Serial.printf ("=> USB Code: %d=0x%X, mod: 0x%X, Press: %d\n", kc, kc, mod, kpress);
+void ConvToC64Key() 
+{
+   Serial.printf ("=> USB Code: %d=0x%X, mod: 0x%X, Press: %d\n", KeyCode, KeyCode, mod, KeyIsPressed);
  
    if (mod != modbuff) //process changed modifiers
    {
@@ -131,21 +121,21 @@ void c64key() {
       modbuff=mod; 
    }
     
-   if (kc == MT88XX_RESET && kpress) 
+   if (KeyCode == MT88XX_RESET && KeyIsPressed) 
    {
       resetMT88();  
       Serial.println("  *MT88XX Reset");
       return;
    }   
    
-   if (kc == RESTORE_KEY)
+   if (KeyCode == RESTORE_KEY)
    {
-     digitalWrite (NMI_PIN, kpress);
-     Serial.printf("  *Restore Key state: %d\n", kpress);
+     digitalWrite (NMI_PIN, KeyIsPressed);
+     Serial.printf("  *Restore Key state: %d\n", KeyIsPressed);
      return;
    }
    
-   if (kc == CAPSLOCK_KEY && kpress) 
+   if (KeyCode == CAPSLOCK_KEY && KeyIsPressed) 
    {
      capslock = !capslock;
      setswitch(C64KP_L_SHIFT, capslock);
@@ -154,22 +144,22 @@ void c64key() {
    }
 
    // Key Process    
-   if(kc >= sizeof(KeyCodeToC64Map)) return; //out  of range?
-   uint8_t c = KeyCodeToC64Map[kc]; 
-   if (c == C64KP_IGNORE) return; //ignore?
+   if(KeyCode >= sizeof(KeyCodeToC64Map)) return; //out  of range?
+   uint8_t C64KeyMap = KeyCodeToC64Map[KeyCode]; 
+   if (C64KeyMap == C64KP_IGNORE) return; //ignore?
    
-   if (c & SHIFT) //Special function to make sure key is shifted to c64
+   if (C64KeyMap & SHIFT) //Special function to make sure key is shifted to c64
    {
       //if pressing and neither shift currently set, force l-shift
-      if (kpress && (mod & 0x22) == 0 && capslock == false) 
+      if (KeyIsPressed && (mod & 0x22) == 0 && capslock == false) 
       {
          modbuff |= 0x02; //so it will get cleared next key up/dn
-         setswitch(39, 1);
+         setswitch(C64KP_L_SHIFT, 1);
       }
-      c &= ~SHIFT; //clear shift bit for base button
+      C64KeyMap &= ~SHIFT; //clear shift bit for base button
    }
    
-   setswitch(c,kpress);
+   setswitch(C64KeyMap,KeyIsPressed);
            
 }
 
