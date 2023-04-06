@@ -1,10 +1,15 @@
 /*
-  C64keyboard - Commodore Keyboard library
+  C64 USB keyboard - Commodore USB Keyboard Interface
 
-  Copyright (c) 2022 Hartland PC LLC
-  Written by Robert VanHazinga
+  Rewritten for Teensy 3.6/4.1 and added:
+    Raw keypresss detection, Shift special keys, symbol mapping, clarity, & bug fixes
+    Copyright (c) 2023 Sensorium Embedded
+    Written by Travis Smith
 
-
+  Original code and C64 Key Pos Mapping:
+    C64keyboard - Commodore Keyboard library
+    Copyright (c) 2022 Hartland PC LLC
+    Written by Robert VanHazinga
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -22,14 +27,21 @@
 */
 
 
-//MT88xx control pins
-#define ANALOG_SW_DATA         0 // Sets selected cross switch on/off (Default 0)
-#define ANALOG_SW_STROBE       2 // Strobe timing pulse (Default 2)
-#define ANALOG_SW_RESET       10 // Reset all MT88XX cross switches to off (Default 10)
-#define ANALOG_SW_ARRAY_START  3 // First pin of 6 bit switch addressing. AY2-0 & AX2-0 (Default 3)
-#define ANALOG_SW_ARRAY_END    8 // Last pin of 6 bit switch addressing. AY2-0 & AX2-0 (Default 8)
-#define NMI_PIN                1 // NMI (RESTORE) KEY PIN (Default 1)
-#define INDICATOR_LED         13 // LED on the Teensy
+//Teensy Pin Mapping
+#define MT8808_DATA_PIN        0 // Sets selected cross switch on/off
+#define NMI_RESTORE_PIN        1 // NMI (RESTORE KEY) PIN
+#define MT8808_STROBE_PIN      2 // Strobe timing pulse (active high)
+#define MT8808_RESET_PIN      10 // Reset all MT8808 cross switches to off (active high)
+#define INDICATOR_LED_PIN     13 // LED on the Teensy
+const uint8_t MT8808_ADDRESS_PINS[] = 
+{
+                               3,  // AY2
+                               4,  // AY1
+                               5,  // AY0
+                               6,  // AX2
+                               7,  // AX1
+                               8,  // AX0
+};
 
 //C64 Key Pos Symbols:
 #define C64KP_1               0x38  // 56
@@ -101,24 +113,10 @@
 #define C64KP_IGNORE          0x80 // Dec 128: C64 Key map value to ignore key press
 #define SHIFT                 0x40 // Dec 64: When bit set, special value that must be shift (f2, etc)
 
-//mod keys to C64 key map:
-const uint8_t MODKEYS[8] = 
-{
-   //USB Host mod bits 0-7: // bit x: USB mod key
-   C64KP_CTRL,              // bit 0: L-Ctrl
-   C64KP_L_SHIFT,           // bit 1: L-Shift
-   C64KP_RUN_STOP,          // bit 2: L-Alt
-   C64KP_COMMODORE,         // bit 3: L-Windows
-   C64KP_CTRL,              // bit 4: R-Ctrl
-   C64KP_R_SHIFT,           // bit 5: R-Shift
-   C64KP_RUN_STOP,          // bit 6: R-Alt
-   C64KP_COMMODORE          // bit 7: R-Windows
-};
-
-//Special function USB key codes:
-#define RESTORE_KEY           0x2B // Dec 43: Tab acts as Restore key
-#define CAPSLOCK_KEY          0x39 // Dec 57: CapsLock key function toggle
-#define MT88XX_RESET          0x45 // Dec 69: F12 resets MT88XX 
+//Special function USB key code assignments:
+#define F12_MT8808_RESET_KEY  0x45 // Dec 69: F12 resets MT8808 
+#define TAB_RESTORE_KEY       0x2B // Dec 43: Tab acts as Restore key
+#define CAPSLOCK_TOG_KEY      0x39 // Dec 57: CapsLock key function toggle
 
 //regular keys to C64 key map:
 const uint8_t KeyCodeToC64Map[] = 
@@ -166,12 +164,12 @@ const uint8_t KeyCodeToC64Map[] =
    C64KP_RTN              , //     40 0x28  Keyboard Return
    C64KP_IGNORE           , //     41 0x29  Keyboard Escape
    C64KP_DEL              , //     42 0x2A  Keyboard Delete (Backspace)
-   C64KP_IGNORE           , //*    43 0x2B  Keyboard Tab
+   C64KP_IGNORE           , //**   43 0x2B  Keyboard Tab (RESTORE)
    C64KP_SPACE            , //     44 0x2C  Keyboard Spacebar
-   C64KP_IGNORE           , //     45 0x2D  Keyboard - and _
+   C64KP_MINUS            , //     45 0x2D  Keyboard - and _
    C64KP_EQUAL            , //     46 0x2E  Keyboard = and +
-   C64KP_IGNORE           , //     47 0x2F  Keyboard [ and {
-   C64KP_IGNORE           , //     48 0x30  Keyboard ] and }
+   C64KP_COLON+SHIFT      , //     47 0x2F  Keyboard [ and {
+   C64KP_SEMICOL+SHIFT    , //     48 0x30  Keyboard ] and }
    C64KP_POUND            , //     49 0x31  Keyboard \ and |
    C64KP_AT               , //     50 0x32  Keyboard Int' # and ~
    C64KP_SEMICOL          , //     51 0x33  Keyboard ; and :
@@ -180,7 +178,7 @@ const uint8_t KeyCodeToC64Map[] =
    C64KP_COMMA            , //     54 0x36  Keyboard , and <
    C64KP_PERIOD           , //     55 0x37  Keyboard . and >
    C64KP_SLASH            , //     56 0x38  Keyboard / and ?
-   C64KP_IGNORE           , //*    57 0x39  Keyboard Caps Lock
+   C64KP_IGNORE           , //**   57 0x39  Keyboard Caps Lock (Toggle)
    C64KP_F1               , //     58 0x3A  Keyboard F1
    C64KP_F1+SHIFT         , //     59 0x3B  Keyboard F2
    C64KP_F3               , //     60 0x3C  Keyboard F3
@@ -192,11 +190,11 @@ const uint8_t KeyCodeToC64Map[] =
    C64KP_IGNORE           , //     66 0x42  Keyboard F9
    C64KP_IGNORE           , //     67 0x43  Keyboard F10
    C64KP_IGNORE           , //     68 0x44  Keyboard F11
-   C64KP_IGNORE           , //*    69 0x45  Keyboard F12
+   C64KP_IGNORE           , //**   69 0x45  Keyboard F12 (MT8808 Reset)
    C64KP_IGNORE           , //     70 0x46  Keyboard PrintScreen
    C64KP_IGNORE           , //     71 0x47  Keyboard Scroll Lock
    C64KP_IGNORE           , //     72 0x48  Keyboard Pause
-   C64KP_IGNORE           , //     73 0x49  Keyboard Insert
+   C64KP_DEL+SHIFT        , //     73 0x49  Keyboard Insert
    C64KP_HOME             , //     74 0x4A  Keyboard Home
    C64KP_IGNORE           , //     75 0x4B  Keyboard PageUp
    C64KP_DEL              , //     76 0x4C  Keyboard Delete(forward)
@@ -220,21 +218,20 @@ const uint8_t KeyCodeToC64Map[] =
    C64KP_IGNORE           , //     94 0x5E  Keypad 6 and Right Arrow
    C64KP_IGNORE           , //     95 0x5F  Keypad 7 and Home
    C64KP_ARR_UP           , //     96 0x60  Keypad 8 and Up Arrow
-   
    C64KP_IGNORE           , //     97 0x61  Keypad 9 and PageUp
    C64KP_IGNORE           , //     98 0x62  Keypad 0 and Insert
    C64KP_IGNORE           , //     99 0x63  Keypad . and Delete
    C64KP_IGNORE           , //    100 0x64  Keyboard Int \ and | 
    C64KP_IGNORE           , //    101 0x65  Keyboard Application (Menu)
    C64KP_IGNORE           , //    102 0x66  Keyboard Power[Notes 4]
-   C64KP_IGNORE           , //    103 0x67  Keypad =
-   C64KP_IGNORE           , //    104 0x68  Keyboard F13
-   C64KP_IGNORE           , //    105 0x69  Keyboard F14
-   C64KP_IGNORE           , //    106 0x6A  Keyboard F15
-   C64KP_IGNORE           , //    107 0x6B  Keyboard F16
-   C64KP_IGNORE           , //    108 0x6C  Keyboard F17
-   C64KP_IGNORE           , //    109 0x6D  Keyboard F18
-   C64KP_IGNORE           , //    110 0x6E  Keyboard F19
+   C64KP_CTRL             , //*   103 0x67  Keypad =         mod bit 0: L-Ctrl
+   C64KP_L_SHIFT          , //*   104 0x68  Keyboard F13     mod bit 1: L-Shift
+   C64KP_RUN_STOP         , //*   105 0x69  Keyboard F14     mod bit 2: L-Alt
+   C64KP_COMMODORE        , //*   106 0x6A  Keyboard F15     mod bit 3: L-Windows
+   C64KP_CTRL             , //*   107 0x6B  Keyboard F16     mod bit 4: R-Ctrl
+   C64KP_R_SHIFT          , //*   108 0x6C  Keyboard F17     mod bit 5: R-Shift
+   C64KP_RUN_STOP         , //*   109 0x6D  Keyboard F18     mod bit 6: R-Alt
+   C64KP_COMMODORE        , //*   110 0x6E  Keyboard F19     mod bit 7: R-Windows
    C64KP_IGNORE           , //    111 0x6F  Keyboard F20
    C64KP_IGNORE           , //    112 0x70  Keyboard F21
    C64KP_IGNORE           , //    113 0x71  Keyboard F22

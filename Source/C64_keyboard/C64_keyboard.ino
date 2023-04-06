@@ -1,10 +1,17 @@
 
 
 /*
-  C64keyboard - Commodore Keyboard library
+  C64 USB keyboard - Commodore USB Keyboard Interface
 
-  Copyright (c) 2022 Hartland PC LLC
-  Written by Robert VanHazinga
+  Rewritten for Teensy 3.6/4.1 and added:
+    Raw keypresss detection, Shift special keys, symbol mapping, clarity, & bug fixes
+    Copyright (c) 2023 Sensorium Embedded
+    Written by Travis Smith
+
+  Original code and C64 Key Pos Mapping:
+    C64keyboard - Commodore Keyboard library
+    Copyright (c) 2022 Hartland PC LLC
+    Written by Robert VanHazinga
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -27,30 +34,30 @@
 USBHost usb;
 KeyboardController keyboard(usb);
 
-static volatile uint8_t KeyCode,mod, modbuff;
-static volatile bool capslock=false,KeyIsPressed=false; 
+bool CapsLockState=false; 
 
-void setup() {
-  
-  usb.begin();
-
-  // initialize the pins
-  for ( int currentPin = ANALOG_SW_ARRAY_START; currentPin <= ANALOG_SW_ARRAY_END; ++currentPin) pinMode( currentPin, OUTPUT);
-  pinMode( ANALOG_SW_STROBE, OUTPUT);// MT88XX strobe
-  pinMode( ANALOG_SW_DATA, OUTPUT);  // MT88XX data
-  pinMode( ANALOG_SW_RESET, OUTPUT); // MT88XX reset
-  pinMode( NMI_PIN, OUTPUT);         // C64 NMI (RESTORE)
-  pinMode(INDICATOR_LED, OUTPUT);
-  digitalWrite(INDICATOR_LED, HIGH);
-  
-  resetMT88();
-
-  keyboard.attachPress(keyPressed);
-  keyboard.attachRelease(keyReleased);
-  
-  Serial.begin(9600);
-  Serial.println("\n\nUSB Keyboard -> Teensy3.6 -> MT8808 -> C64 keyboard input");
-  digitalWrite(INDICATOR_LED, LOW);
+void setup() 
+{
+   usb.begin();
+   
+   for ( uint8_t AddrBit = 0; AddrBit < 6; AddrBit++) pinMode(MT8808_ADDRESS_PINS[AddrBit], OUTPUT);
+   pinMode(MT8808_STROBE_PIN, OUTPUT);
+   pinMode(MT8808_DATA_PIN, OUTPUT);  
+   pinMode(MT8808_RESET_PIN, OUTPUT); 
+   pinMode(NMI_RESTORE_PIN, OUTPUT);  
+   pinMode(INDICATOR_LED_PIN, OUTPUT);
+   
+   digitalWrite(NMI_RESTORE_PIN, LOW);
+   digitalWrite(MT8808_STROBE_PIN, LOW);
+   digitalWrite(INDICATOR_LED_PIN, HIGH);
+   ResetMT8808();
+   
+   keyboard.attachRawPress(OnRawPress);
+   keyboard.attachRawRelease(OnRawRelease);
+   
+   Serial.begin(9600);
+   Serial.println("\n\nUSB Keyboard -> Teensy3.6 -> MT8808 -> C64 keyboard input");
+   digitalWrite(INDICATOR_LED_PIN, LOW);
 }
 
 void loop() 
@@ -58,108 +65,81 @@ void loop()
    usb.Task(); // Process USB tasks
 }
 
-void keyPressed() {
-  digitalWrite(INDICATOR_LED, HIGH);
-  KeyCode = keyboard.getOemKey();
-  mod = keyboard.getModifiers();
-  KeyIsPressed = true;
-  Serial.print("Press==");
-  ConvToC64Key();
-  //digitalWrite(INDICATOR_LED, LOW);
-}
-
-void keyReleased() {
-  //digitalWrite(INDICATOR_LED, HIGH);
-  KeyCode = keyboard.getOemKey();
-  mod = keyboard.getModifiers();
-  KeyIsPressed = false;
-  Serial.print("Release");
-  ConvToC64Key();
-  digitalWrite(INDICATOR_LED, LOW);
-}
-
-void resetMT88(void) 
+void OnRawPress(uint8_t keycode) 
 {
-  digitalWrite(ANALOG_SW_DATA  ,  LOW);
-  digitalWrite(ANALOG_SW_RESET , HIGH);
-  digitalWrite(ANALOG_SW_STROBE, HIGH);
-  digitalWrite(ANALOG_SW_RESET ,  LOW);
-  digitalWrite(ANALOG_SW_STROBE,  LOW);
-  digitalWrite(ANALOG_SW_DATA  , HIGH);
-  capslock = false;
-  modbuff =0;
-  KeyIsPressed=false;
+   digitalWrite(INDICATOR_LED_PIN, HIGH);
+   Serial.print("Press==");
+   ConvToC64Key(keycode, true);
 }
 
-void setswitch(uint8_t C64KeyMap,bool KeyState){
-  bool BitState;
-  digitalWrite(ANALOG_SW_DATA , KeyState);
-    
-  if (C64KeyMap < 64) {
-    //set the address:
-    for ( int currentPin = ANALOG_SW_ARRAY_START; currentPin <= ANALOG_SW_ARRAY_END; ++currentPin) 
-    {
-      BitState = bitRead(C64KeyMap, (currentPin - ANALOG_SW_ARRAY_START));
-      digitalWrite(currentPin, BitState);
-    }
-    digitalWrite( ANALOG_SW_STROBE, HIGH);
-    digitalWrite( ANALOG_SW_STROBE, LOW);
-  }
-  
-  // Reset switch state pin to default high state (Key press).
-  digitalWrite(ANALOG_SW_DATA , HIGH);
-  Serial.printf ("  *Switch: C64 KeyMap: %d, State: %d\n", C64KeyMap, KeyState);
-}
-      
-void ConvToC64Key() 
+void OnRawRelease(uint8_t keycode) 
 {
-   Serial.printf ("=> USB Code: %d=0x%X, mod: 0x%X, Press: %d\n", KeyCode, KeyCode, mod, KeyIsPressed);
+   Serial.print("Release");
+   ConvToC64Key(keycode, false);
+   digitalWrite(INDICATOR_LED_PIN, LOW);
+}
+
+void ResetMT8808(void) 
+{
+   digitalWrite(MT8808_RESET_PIN, HIGH);
+   digitalWrite(MT8808_RESET_PIN,  LOW);
+   CapsLockState = false;
+}
+
+void ConvToC64Key(uint8_t KeyCode, bool KeyIsPressed) 
+{
+   Serial.printf ("=> USB Code: %d=0x%X, Press: %d\n", KeyCode, KeyCode, KeyIsPressed);
  
-   if (mod != modbuff) //process changed modifiers
+   // check for special USB scan codes
+   if (KeyCode == F12_MT8808_RESET_KEY && KeyIsPressed) 
    {
-      for (int i=0;i < 8; i++) if (bitRead(modbuff,i) != bitRead(mod,i)) setswitch(MODKEYS[i], bitRead(mod,i));
-      modbuff=mod; 
-   }
-    
-   if (KeyCode == MT88XX_RESET && KeyIsPressed) 
-   {
-      resetMT88();  
-      Serial.println("  *MT88XX Reset");
+      ResetMT8808();  
+      Serial.println("  *MT8808 Reset");
       return;
    }   
    
-   if (KeyCode == RESTORE_KEY)
+   if (KeyCode == TAB_RESTORE_KEY)
    {
-     digitalWrite (NMI_PIN, KeyIsPressed);
+     digitalWrite (NMI_RESTORE_PIN, KeyIsPressed);
      Serial.printf("  *Restore Key state: %d\n", KeyIsPressed);
      return;
    }
    
-   if (KeyCode == CAPSLOCK_KEY && KeyIsPressed) 
+   if (KeyCode == CAPSLOCK_TOG_KEY && KeyIsPressed) 
    {
-     capslock = !capslock;
-     setswitch(C64KP_L_SHIFT, capslock);
-     Serial.printf("  *Caps Lock state: %d\n", capslock);
+     CapsLockState = !CapsLockState;
+     SetSwitch(C64KP_L_SHIFT, CapsLockState);
+     Serial.printf("  *Caps Lock state: %d\n", CapsLockState);
      return;
    }
 
-   // Key Process    
+   // Process Key     
    if(KeyCode >= sizeof(KeyCodeToC64Map)) return; //out  of range?
+   
    uint8_t C64KeyMap = KeyCodeToC64Map[KeyCode]; 
    if (C64KeyMap == C64KP_IGNORE) return; //ignore?
    
    if (C64KeyMap & SHIFT) //Special function to make sure key is shifted to c64
    {
-      //if pressing and neither shift currently set, force l-shift
-      if (KeyIsPressed && (mod & 0x22) == 0 && capslock == false) 
-      {
-         modbuff |= 0x02; //so it will get cleared next key up/dn
-         setswitch(C64KP_L_SHIFT, 1);
-      }
-      C64KeyMap &= ~SHIFT; //clear shift bit for base button
+      if (KeyIsPressed) SetSwitch(C64KP_R_SHIFT, 1); // press before...
+      SetSwitch(C64KeyMap, KeyIsPressed); 
+      if (!KeyIsPressed) SetSwitch(C64KP_R_SHIFT, 0); // ...release after
+      return;
    }
    
-   setswitch(C64KeyMap,KeyIsPressed);
-           
+   SetSwitch(C64KeyMap, KeyIsPressed); //normal case
 }
+
+void SetSwitch(uint8_t C64KeyMap, bool KeyState)
+{
+   C64KeyMap &= 63;  //strip upper bits
+   
+   digitalWrite(MT8808_DATA_PIN , KeyState);
+   for ( uint8_t AddrBit = 0; AddrBit < 6; AddrBit++) digitalWrite(MT8808_ADDRESS_PINS[AddrBit], C64KeyMap & (1<<AddrBit));
+   digitalWrite( MT8808_STROBE_PIN, HIGH);
+   digitalWrite( MT8808_STROBE_PIN, LOW);
+   
+   Serial.printf ("  *Switch: C64 KeyMap: %d, State: %d\n", C64KeyMap, KeyState);
+}
+      
 
