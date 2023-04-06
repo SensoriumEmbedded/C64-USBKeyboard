@@ -162,7 +162,7 @@ const uint8_t KeyCodeToC64Map[] =
    C64KP_9                , //     38 0x26  Keyboard 9 and (
    C64KP_ZERO             , //     39 0x27  Keyboard 0 and )
    C64KP_RTN              , //     40 0x28  Keyboard Return
-   C64KP_IGNORE           , //     41 0x29  Keyboard Escape
+   C64KP_RUN_STOP         , //     41 0x29  Keyboard Escape
    C64KP_DEL              , //     42 0x2A  Keyboard Delete (Backspace)
    C64KP_IGNORE           , //**   43 0x2B  Keyboard Tab (RESTORE)
    C64KP_SPACE            , //     44 0x2C  Keyboard Spacebar
@@ -226,11 +226,11 @@ const uint8_t KeyCodeToC64Map[] =
    C64KP_IGNORE           , //    102 0x66  Keyboard Power[Notes 4]
    C64KP_CTRL             , //*   103 0x67  Keypad =         mod bit 0: L-Ctrl
    C64KP_L_SHIFT          , //*   104 0x68  Keyboard F13     mod bit 1: L-Shift
-   C64KP_RUN_STOP         , //*   105 0x69  Keyboard F14     mod bit 2: L-Alt
+   C64KP_IGNORE           , //*   105 0x69  Keyboard F14     mod bit 2: L-Alt
    C64KP_COMMODORE        , //*   106 0x6A  Keyboard F15     mod bit 3: L-Windows
    C64KP_CTRL             , //*   107 0x6B  Keyboard F16     mod bit 4: R-Ctrl
    C64KP_R_SHIFT          , //*   108 0x6C  Keyboard F17     mod bit 5: R-Shift
-   C64KP_RUN_STOP         , //*   109 0x6D  Keyboard F18     mod bit 6: R-Alt
+   C64KP_IGNORE           , //*   109 0x6D  Keyboard F18     mod bit 6: R-Alt
    C64KP_COMMODORE        , //*   110 0x6E  Keyboard F19     mod bit 7: R-Windows
    C64KP_IGNORE           , //    111 0x6F  Keyboard F20
    C64KP_IGNORE           , //    112 0x70  Keyboard F21
