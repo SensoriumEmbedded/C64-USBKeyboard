@@ -114,6 +114,7 @@ const uint8_t MT8808_ADDRESS_PINS[] =
 #define SHIFT                 0x40 // Dec 64: When bit set, special value that must be shift (f2, etc)
 
 //Special function USB key code assignments:
+#define F11_LOOPBACK_KEY      0x44 // Dec 68: F11 sets diag loopback emulation
 #define F12_MT8808_RESET_KEY  0x45 // Dec 69: F12 resets MT8808 
 #define TAB_RESTORE_KEY       0x2B // Dec 43: Tab acts as Restore key
 #define CAPSLOCK_TOG_KEY      0x39 // Dec 57: CapsLock key function toggle

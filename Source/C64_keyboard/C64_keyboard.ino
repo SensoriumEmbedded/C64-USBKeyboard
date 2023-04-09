@@ -98,6 +98,15 @@ void ConvToC64Key(uint8_t KeyCode, bool KeyIsPressed)
       return;
    }   
    
+   if (KeyCode == F11_LOOPBACK_KEY && KeyIsPressed) 
+   {
+      ResetMT8808();  
+      uint8_t LoopSwitches[]={0x00, 0x09, 0x12, 0x1b, 0x24, 0x2d, 0x36, 0x3f};
+      for(uint8_t SWNum=0; SWNum<sizeof(LoopSwitches); SWNum++) SetSwitch(LoopSwitches[SWNum],1);
+      Serial.println("  *Loopback Mode");
+      return;
+   }   
+   
    if (KeyCode == TAB_RESTORE_KEY)
    {
      digitalWrite (NMI_RESTORE_PIN, KeyIsPressed);
