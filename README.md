@@ -15,3 +15,10 @@
 * Symbol mapping for readability and easy editing
 * Improved code clarity, fixed bugs
 * PCB designed
+
+Questions?  e-mail [Travis @ Sensorium](mailto:travis@sensoriumembedded.com)
+
+
+Stand-alone and in-system pictures below.  Note that I have sockets above and below the Teensy module in my build. Actual build per BOM using headers will make it sit much lower (similar to the MT8808 chip)
+|![As-built](PCB/pics/As-built.jpg)|![In-System](PCB/pics/In-System.jpg)| 
+|:--:|:--:|
