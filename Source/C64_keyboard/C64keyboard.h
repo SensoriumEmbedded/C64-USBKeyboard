@@ -44,6 +44,15 @@ const uint8_t MT8808_ADDRESS_PINS[] =
 };
 
 //C64 Key Pos Symbols:
+//6 bit encoded switch matrix location, 3 bits for the X value and 3 bits for the Y
+// bit 0: AY2
+// bit 1: AY1
+// bit 2: AY0
+// bit 3: AX2
+// bit 4: AX1
+// bit 5: AX0
+// bit 7: special value for keys that must be shifted (f2, etc), see KeyCodeToC64Map
+// bit 6: Key map value to ignore key press
 #define C64KP_1               0x38  // 56
 #define C64KP_2               0x3E  // 62
 #define C64KP_3               0x20  // 32
@@ -120,6 +129,7 @@ const uint8_t MT8808_ADDRESS_PINS[] =
 #define CAPSLOCK_TOG_KEY      0x39 // Dec 57: CapsLock key function toggle
 
 //regular keys to C64 key map:
+//maps C64 Key Pos Symbols to a modern keyboard map
 const uint8_t KeyCodeToC64Map[] = 
 {
    C64KP_IGNORE           , //      0 0x00  Reserved
