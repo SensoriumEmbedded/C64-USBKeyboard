@@ -32,9 +32,14 @@
 #include <USBHost_t36.h>
 
 USBHost usb;
+USBHub hub1(usb);
 KeyboardController keyboard(usb);
+USBHIDParser hid1(usb);
+USBHIDParser hid2(usb);
 
 bool CapsLockState=false; 
+
+extern "C" uint32_t set_arm_clock(uint32_t frequency);
 
 void setup() 
 {
@@ -56,8 +61,14 @@ void setup()
    keyboard.attachRawRelease(OnRawRelease);
    
    Serial.begin(9600);
-   Serial.println("\n\nUSB Keyboard -> Teensy3.6 -> MT8808 -> C64 keyboard input");
+   
+   Serial.println("\n\nUSB Keyboard -> Teensy -> MT8808 -> C64 keyboard input");
    digitalWrite(INDICATOR_LED_PIN, LOW);
+   #ifdef ARDUINO_TEENSY41
+      set_arm_clock(180000000);  //slow down Teensy 4.1 to match 3.6 default, otherwise too fast for 8808.  
+         //Could add delays to SetSwitch, but slower CPU runs cooler and uses less power
+      Serial.println("Teensy 4.1 found");
+   #endif
 }
 
 void loop() 
@@ -106,6 +117,17 @@ void ConvToC64Key(uint8_t KeyCode, bool KeyIsPressed)
       Serial.println("  *Loopback Mode");
       return;
    }   
+   
+   if (KeyCode == F10_PULSE_OUTPUT && KeyIsPressed) 
+   {
+      //drive output low, then tri-state (open collector emulation)
+      digitalWrite(EXT_PULSE_OUT , 0);
+      pinMode(EXT_PULSE_OUT, OUTPUT);
+      delay(50);
+      pinMode(EXT_PULSE_OUT, INPUT);
+      Serial.println("  *Output Pulsed");
+      return;
+   }
    
    if (KeyCode == TAB_RESTORE_KEY)
    {

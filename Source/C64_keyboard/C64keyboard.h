@@ -33,6 +33,7 @@
 #define MT8808_STROBE_PIN      2 // Strobe timing pulse (active high)
 #define MT8808_RESET_PIN      10 // Reset all MT8808 cross switches to off (active high)
 #define INDICATOR_LED_PIN     13 // LED on the Teensy
+#define EXT_PULSE_OUT         32 // External pulse to simulate TeensyROM button push
 const uint8_t MT8808_ADDRESS_PINS[] = 
 {
                                3,  // AY2
@@ -123,6 +124,7 @@ const uint8_t MT8808_ADDRESS_PINS[] =
 #define SHIFT                 0x40 // Dec 64: When bit set, special value that must be shift (f2, etc)
 
 //Special function USB key code assignments:
+#define F10_PULSE_OUTPUT      0x43 // Dec 67: F10 pulses output pin EXT_PULSE_OUT low (TeensyROM Reset)
 #define F11_LOOPBACK_KEY      0x44 // Dec 68: F11 sets diag loopback emulation
 #define F12_MT8808_RESET_KEY  0x45 // Dec 69: F12 resets MT8808 
 #define TAB_RESTORE_KEY       0x2B // Dec 43: Tab acts as Restore key
@@ -199,8 +201,8 @@ const uint8_t KeyCodeToC64Map[] =
    C64KP_F7               , //     64 0x40  Keyboard F7
    C64KP_F7+SHIFT         , //     65 0x41  Keyboard F8
    C64KP_IGNORE           , //     66 0x42  Keyboard F9
-   C64KP_IGNORE           , //     67 0x43  Keyboard F10
-   C64KP_IGNORE           , //     68 0x44  Keyboard F11
+   C64KP_IGNORE           , //**   67 0x43  Keyboard F10 (Pulse Output)
+   C64KP_IGNORE           , //**   68 0x44  Keyboard F11 (Loopback Mode)
    C64KP_IGNORE           , //**   69 0x45  Keyboard F12 (MT8808 Reset)
    C64KP_IGNORE           , //     70 0x46  Keyboard PrintScreen
    C64KP_IGNORE           , //     71 0x47  Keyboard Scroll Lock
