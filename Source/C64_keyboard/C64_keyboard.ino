@@ -36,8 +36,11 @@ USBHub hub1(usb);
 KeyboardController keyboard(usb);
 USBHIDParser hid1(usb);
 USBHIDParser hid2(usb);
+IntervalTimer TODTimer;
 
 bool CapsLockState=false; 
+bool TODClockState=false;
+bool TOD60n50HzSel=true;
 
 extern "C" uint32_t set_arm_clock(uint32_t frequency);
 
@@ -51,6 +54,7 @@ void setup()
    pinMode(MT8808_RESET_PIN, OUTPUT); 
    pinMode(NMI_RESTORE_PIN, OUTPUT);  
    pinMode(INDICATOR_LED_PIN, OUTPUT);
+   pinMode(EXT_TOD_CLK_OUT_PIN, OUTPUT);
    
    digitalWrite(NMI_RESTORE_PIN, LOW);
    digitalWrite(MT8808_STROBE_PIN, LOW);
@@ -59,6 +63,8 @@ void setup()
    
    keyboard.attachRawPress(OnRawPress);
    keyboard.attachRawRelease(OnRawRelease);
+   
+   TODTimer.begin(ToggleTOD, IntervaluS_60Hz);  // Default to 60Hz
    
    Serial.begin(9600);
    
@@ -121,11 +127,20 @@ void ConvToC64Key(uint8_t KeyCode, bool KeyIsPressed)
    if (KeyCode == F10_PULSE_OUTPUT && KeyIsPressed) 
    {
       //drive output low, then tri-state (open collector emulation)
-      digitalWrite(EXT_PULSE_OUT , 0);
-      pinMode(EXT_PULSE_OUT, OUTPUT);
+      digitalWrite(EXT_PULSE_OUT_PIN , 0);
+      pinMode(EXT_PULSE_OUT_PIN, OUTPUT);
       delay(50);
-      pinMode(EXT_PULSE_OUT, INPUT);
+      pinMode(EXT_PULSE_OUT_PIN, INPUT);
       Serial.println("  *Output Pulsed");
+      return;
+   }
+   
+   if (KeyCode == F9_TOD_50_60HzTOGGLE && KeyIsPressed) 
+   {
+      // toggle TOD output pin timer between 50 and 60Hz
+      TOD60n50HzSel = !TOD60n50HzSel;
+      TODTimer.update((TOD60n50HzSel ? IntervaluS_60Hz : IntervaluS_50Hz));
+      Serial.printf("  *changed TOD clk to %d0Hz\n", (TOD60n50HzSel ? 6 : 5 ));
       return;
    }
    
@@ -173,4 +188,7 @@ void SetSwitch(uint8_t C64KeyMap, bool KeyState)
    Serial.printf ("  *Switch: C64 KeyMap: %d, State: %d\n", C64KeyMap, KeyState);
 }
       
-
+void ToggleTOD()
+{
+   digitalWrite(EXT_TOD_CLK_OUT_PIN, TODClockState = !TODClockState);   
+}
