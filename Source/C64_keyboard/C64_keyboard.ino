@@ -40,7 +40,7 @@ IntervalTimer TODTimer;
 
 bool CapsLockState=false; 
 bool TODClockState=false;
-bool TOD60n50HzSel=true;
+bool TOD60n50HzSel=false; //50Hz default
 
 extern "C" uint32_t set_arm_clock(uint32_t frequency);
 
@@ -64,7 +64,7 @@ void setup()
    keyboard.attachRawPress(OnRawPress);
    keyboard.attachRawRelease(OnRawRelease);
    
-   TODTimer.begin(ToggleTOD, IntervaluS_60Hz);  // Default to 60Hz
+   TODTimer.begin(ToggleTOD, CurrentInterval); 
    
    Serial.begin(9600);
    
@@ -139,7 +139,7 @@ void ConvToC64Key(uint8_t KeyCode, bool KeyIsPressed)
    {
       // toggle TOD output pin timer between 50 and 60Hz
       TOD60n50HzSel = !TOD60n50HzSel;
-      TODTimer.update((TOD60n50HzSel ? IntervaluS_60Hz : IntervaluS_50Hz));
+      TODTimer.update(CurrentInterval);
       Serial.printf("  *changed TOD clk to %d0Hz\n", (TOD60n50HzSel ? 6 : 5 ));
       return;
    }

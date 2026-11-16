@@ -48,6 +48,7 @@ const uint8_t MT8808_ADDRESS_PINS[] =
 
 #define IntervaluS_50Hz    10000 //  1/50/2*1000000
 #define IntervaluS_60Hz     8333 //  1/60/2*1000000
+#define CurrentInterval    (TOD60n50HzSel ? IntervaluS_60Hz : IntervaluS_50Hz)
 
 //C64 Key Pos Symbols:
 //6 bit encoded switch matrix location, 3 bits for the X value and 3 bits for the Y
