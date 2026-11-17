@@ -54,7 +54,7 @@ public:
    void    PhysTodToggle();             // the USB keyboard's F9
    void    Event(const char *Text);     // a key or debug EV line, sent only while E is 1
 
-   static const int MAX_OPS = MAX_STROKES * 4 + 8;
+   static const int MAX_OPS = MAX_STROKES * 8 + 8;   // a stroke with modifiers is 8 ops (Start)
 
 private:
    enum OpKind : uint8_t { OP_DOWN, OP_UP, OP_WAIT, OP_PULSE, OP_VRESET_ON, OP_VRESET_OFF, OP_J1 };

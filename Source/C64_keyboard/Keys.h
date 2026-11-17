@@ -43,3 +43,28 @@ enum : uint8_t
 static const uint64_t LOOPBACK_KEYS =
    KeyBit(000) | KeyBit(011) | KeyBit(022) | KeyBit(033) |
    KeyBit(044) | KeyBit(055) | KeyBit(066) | KeyBit(077);
+
+// SHIFT, CTRL and C=
+static const uint64_t MODIFIER_KEYS =
+   KeyBit(C64K_LSHIFT) | KeyBit(C64K_RSHIFT) | KeyBit(C64K_CTRL) | KeyBit(C64K_CBM);
+
+// The order a matrix change is made in, the way a typist works: switches
+// opening first, other keys before modifiers, then switches closing,
+// modifiers before other keys.  Calls Set(key, on) for each switch that changes.
+template <typename F>
+inline void ForEachMatrixChange(uint64_t From, uint64_t To, F Set)
+{
+   const uint64_t opening = From & ~To, closing = To & ~From;
+   const uint64_t order[4] =
+   {
+      opening & ~MODIFIER_KEYS, opening & MODIFIER_KEYS,
+      closing & MODIFIER_KEYS,  closing & ~MODIFIER_KEYS,
+   };
+   for (int g = 0; g < 4; g++)
+   {
+      for (uint8_t k = 0; k < 64; k++)
+      {
+         if (order[g] & KeyBit(k)) Set(k, g >= 2);
+      }
+   }
+}

@@ -309,13 +309,24 @@ void Engine::Start(const Cmd &c)
             }
             else
             {
-               uint64_t keys = KeyBit(s.Key);
-               if (s.Mods & MOD_SHIFT) keys |= KeyBit(C64K_LSHIFT);
-               if (s.Mods & MOD_CTRL)  keys |= KeyBit(C64K_CTRL);
-               if (s.Mods & MOD_CBM)   keys |= KeyBit(C64K_CBM);
-               Add(OP_DOWN, 0, keys);
+               // Modifiers a scan ahead of the key, and released a scan after it
+               uint64_t mods = 0;
+               if (s.Mods & MOD_SHIFT) mods |= KeyBit(C64K_LSHIFT);
+               if (s.Mods & MOD_CTRL)  mods |= KeyBit(C64K_CTRL);
+               if (s.Mods & MOD_CBM)   mods |= KeyBit(C64K_CBM);
+               if (mods)
+               {
+                  Add(OP_DOWN, 0, mods);
+                  Add(OP_WAIT, MOD_LEAD_MS * 1000);
+               }
+               Add(OP_DOWN, 0, KeyBit(s.Key));
                Add(OP_WAIT, c.A * 1000);
-               Add(OP_UP, 0, keys);
+               Add(OP_UP, 0, KeyBit(s.Key));
+               if (mods)
+               {
+                  Add(OP_WAIT, MOD_LEAD_MS * 1000);
+                  Add(OP_UP, 0, mods);
+               }
             }
             Add(OP_WAIT, c.B * 1000);
          }

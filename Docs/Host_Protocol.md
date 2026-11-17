@@ -9,6 +9,7 @@ Protocol version: **1** (`proto=1` in the `?` reply).
 - USB CDC serial on the Teensy's micro-USB port. The baud rate is ignored, with one exception: never open the port at 134 baud, which reboots a Teensy into its bootloader.
 - USB serial string `C64USBKeyboard-<chipid>`, with the chip id in decimal. Product string `C64 USB Keyboard`. Find the board by its serial string without opening any port.
 - The host must assert DTR, which pyserial and most terminals do by default. When DTR drops (the host closes the port), or the USB bus suspends (the cable is pulled or the PC sleeps), the board releases everything the host holds (see "Safety"). Both count as a DTR drop below.
+- Bytes that arrive while DTR is low, or the bus is suspended, are discarded, never run. A command written just before the port closes may be dropped; wait for its reply before closing.
 - The board powers from the C64. Its port disappears whenever the C64 is off and appears within about a second of power-on.
 
 ## Lines
@@ -79,6 +80,7 @@ So RETURN is `01`, A is `12`, SPACE is `74`, C= is `75` and RUN/STOP is `77`.
 - Only one timed action runs at a time. While one runs, any command that would change an output gets `ERR <CMD> busy`. Queries (`?`, `TIME`, `T ?`, `V ?`, `F ?`), `E` and `A` are always answered.
 - A switch closed by `K` stays closed until `K ... u`, `A`, its timeout or a DTR drop, whatever `P`, `S` or `X` do with the same switch. `P`, `S` and `X` release everything they pressed when they end or are aborted.
 - Host closures are OR'd with the physical USB keyboard's. A switch is closed if either closes it, and the USB keyboard keeps working during a host session.
+- When several switches change at once, SHIFT, CTRL and C= close before the other keys and open after them, microseconds apart. A keyboard scan already under way can still see a key without its modifier, so `S` closes modifiers 20 ms ahead of their key. To do the same with `P`, `K` or `X`, close the modifier first: `X d 17;w 20;d 12;w 50;u 12;w 20;u 17`.
 
 ## Safety
 
@@ -118,7 +120,7 @@ Every time argument is optional; without one the default applies.
 | `K <keys> u` | Release switches (already open is fine) | | |
 | `P <keys> [hold_ms] [gap_ms]` | Close together, hold, open together, wait the gap | hold 1 to 10000, gap 0 to 10000 | 50, 50 |
 | `S <text>` | Type text (see "Typed text") | total 60 s | 50, 50 per key |
-| `ST <hold_ms> <gap_ms> <text>` | `S` with its own key timing | hold 1 to 10000, gap 0 to 10000 | |
+| `ST <hold_ms> <gap_ms> <text>` | `S` with its own key timing | hold 20 to 10000, gap 20 to 10000 | |
 | `N [ms]` | RESTORE pulse | 1 to 10000 | 50 |
 | `A` | Release every host hold (`K` keys, `R hold`, `D on`) and abort a running action | | |
 | `R [us]` | /RESET pulse | 10 to 10000000 | 50000 |
@@ -164,7 +166,9 @@ A list is comma-separated (`fitted=tod,menu,reset`), keys are `+`-joined (`held=
 - With SHIFT: `!` `"` `#` `$` `%` `&` `'` `(` `)` are SHIFT+1 to SHIFT+9, `[` is SHIFT+`:`, `]` is SHIFT+`;`, `<` is SHIFT+`,`, `>` is SHIFT+`.` and `?` is SHIFT+`/`.
 - `` ` ``, `|` and `~` have no C64 key. `{` and `}` only delimit names.
 - The text runs to the end of the line, so `"` needs no escaping: `S load"*",8,1{return}`.
-- Each key is held 50 ms with a 50 ms gap; `ST` sets other values. That's about 10 keys a second. The KERNAL buffers only 10 keys, so text typed while the C64 isn't reading input beyond that is lost.
+- Each key is held 50 ms with a 50 ms gap; `ST` sets other values, down to 20 ms each. A key must be seen down in one keyboard scan and up in another, and the KERNAL scans every 1/60 s, many programs once a frame (1/50 s on PAL). Shorter times can miss a key, or merge it with the same key typed next.
+- SHIFT, CTRL and C= go down 20 ms before their key and up 20 ms after it, so no scan sees the key without them.
+- That's about 10 keys a second, or 7 with a modifier. The KERNAL buffers only 10 keys, so text typed while the C64 isn't reading input beyond that is lost.
 
 Names, in braces:
 
@@ -220,7 +224,7 @@ The J1 setting lasts until the C64 powers off. The board powers down with it, an
 > R
 < OK R t0=81234012 t1=81284019
 > S load"$",8{return}
-< OK S n=10 t0=83011200 t1=84001320
+< OK S n=10 t0=83011200 t1=84081320
 > K 77 d
 < OK K t=85000004
 > N

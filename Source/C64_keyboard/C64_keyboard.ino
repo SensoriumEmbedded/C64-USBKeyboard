@@ -35,7 +35,8 @@
 #include <stdarg.h>
 #include "Keys.h"
 #include "Engine.h"
-#include "LineReader.h"
+#include "HostPort.h"
+#include "PhysKeys.h"
 #include "Matrix.h"
 #include "Outputs.h"
 #include "Fitted.h"
@@ -50,7 +51,7 @@ KeyboardController keyboard(usb);
 USBHIDParser hid1(usb);
 USBHIDParser hid2(usb);
 
-bool CapsLockState=false;
+PhysKeys Phys;            //the USB keyboard's matrix closures, from the USB keys held
 uint8_t PhysKeysDown=0;   //USB keyboard keys held, for the LED
 bool MenuPulsing=false;   //F10's TR menu button pulse, ended from loop()
 uint32_t MenuReleaseAt=0;
@@ -118,36 +119,20 @@ public:
 static TeensyHal  TheHal;
 static Identity   Id;
 static Engine     Host(TheHal, Id);
-static LineReader Reader;
+static HostPort   Port(Host);
 static char       BuildStr[24];
 
 static void HostSerialTask()
 {
-   static bool WasConnected = false;
-   bool connected = HostConnected();
-   if (connected != WasConnected)
-   {
-      WasConnected = connected;
-      if (!connected)
-      {
-         Reader.Reset();
-         Host.OnDtrDrop();
-      }
-   }
-
+   Port.SetConnected(HostConnected());   // a drop releases everything; bytes while closed are discarded
    uint64_t now = Now64();
    for (int n = 0; n < 64 && Serial.available() > 0; n++)   // a bounded batch, so usb.Task() keeps running
    {
       int c = Serial.read();
       if (c < 0) break;
-      switch (Reader.Feed((uint8_t)c, now))
-      {
-         case LineReader::Line: Host.OnLine(Reader.Text()); break;
-         case LineReader::Junk: Host.OnJunkLine(); break;
-         default: break;
-      }
+      Port.Byte((uint8_t)c, now);
    }
-   Reader.Tick(now);
+   Port.Tick(now);
 }
 
 // A key or debug EV line, sent only while E is 1
@@ -191,8 +176,8 @@ static void KeyTask()
    {
       // A lost release would leave a key stuck: drop every USB keyboard closure
       KeyQOverflow = false;
+      Phys.Clear();
       Matrix_ResetChip();
-      CapsLockState = false;
       PhysKeysDown = 0;
       PhysEvent("key queue overflow, mt8808-reset");
    }
@@ -260,17 +245,18 @@ void ConvToC64Key(uint8_t KeyCode, bool KeyIsPressed)   //main loop, from KeyTas
    // check for special USB scan codes
    if (KeyCode == F12_MT8808_RESET_KEY && KeyIsPressed)
    {
+      Phys.Clear();         //keys still down stay open until pressed again
       Matrix_ResetChip();   //the host's closures stay
-      CapsLockState = false;
       PhysEvent("f12 mt8808-reset");
       return;
    }
 
    if (KeyCode == F11_LOOPBACK_KEY && KeyIsPressed)
    {
+      Phys.Clear();
+      Phys.Loopback();      //PAn to PBn: 00, 11, ... 77, until F12
       Matrix_ResetChip();
-      CapsLockState = false;
-      for (uint8_t Line = 0; Line < 8; Line++) Matrix_SetPhys(Line * 9, true);   //PAn to PBn: 00, 11, ... 77
+      Matrix_SetPhys(Phys.Mask());
       PhysEvent("f11 loopback");
       return;
    }
@@ -304,26 +290,13 @@ void ConvToC64Key(uint8_t KeyCode, bool KeyIsPressed)   //main loop, from KeyTas
 
    if (KeyCode == CAPSLOCK_TOG_KEY && KeyIsPressed)
    {
-     CapsLockState = !CapsLockState;
-     Matrix_SetPhys(C64K_LSHIFT, CapsLockState);
-     PhysEvent("caps %d", CapsLockState);
+     Phys.ToggleCaps();
+     Matrix_SetPhys(Phys.Mask());
+     PhysEvent("caps %d", Phys.Caps());
      return;
    }
 
-   // Process Key
-   if(KeyCode >= sizeof(KeyCodeToC64Map)) return; //out  of range?
-
-   uint8_t C64KeyMap = KeyCodeToC64Map[KeyCode];
-   if (C64KeyMap == C64KP_IGNORE) return; //ignore?
-
-   uint8_t Key = KeyNumFromC64KP(C64KeyMap & 63);
-   if (C64KeyMap & SHIFT) //Special function to make sure key is shifted to c64
-   {
-      if (KeyIsPressed) Matrix_SetPhys(C64K_RSHIFT, true); // press before...
-      Matrix_SetPhys(Key, KeyIsPressed);
-      if (!KeyIsPressed) Matrix_SetPhys(C64K_RSHIFT, false); // ...release after
-      return;
-   }
-
-   Matrix_SetPhys(Key, KeyIsPressed); //normal case
+   // Process Key: KeyCodeToC64Map, with SHIFT added for F2, cursor up/left and INST.
+   // The matrix closes SHIFT before the key and opens it after.
+   if (Phys.Key(KeyCode, KeyIsPressed)) Matrix_SetPhys(Phys.Mask());
 }

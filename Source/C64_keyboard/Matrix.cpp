@@ -24,15 +24,12 @@ static void SetSwitch(uint8_t Code, bool On)
    digitalWrite(MT8808_STROBE_PIN, LOW);
 }
 
+// SHIFT, CTRL and C= close before the keys they modify and open after them
 static void Apply()
 {
    uint64_t want = Phys | Host;
-   uint64_t diff = want ^ Current;
-   if (!diff) return;
-   for (uint8_t k = 0; k < 64; k++)
-   {
-      if (diff & KeyBit(k)) SetSwitch(C64KPFromKeyNum(k), (want & KeyBit(k)) != 0);
-   }
+   if (want == Current) return;
+   ForEachMatrixChange(Current, want, [](uint8_t k, bool On) { SetSwitch(C64KPFromKeyNum(k), On); });
    Current = want;
 }
 
@@ -55,10 +52,9 @@ void Matrix_Begin()
    Phys = Host = 0;
 }
 
-void Matrix_SetPhys(uint8_t Key, bool On)
+void Matrix_SetPhys(uint64_t Mask)
 {
-   if (On) Phys |= KeyBit(Key);
-   else Phys &= ~KeyBit(Key);
+   Phys = Mask;
    Apply();
 }
 

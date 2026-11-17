@@ -12,7 +12,10 @@ import { spawnSync } from 'node:child_process';
 
 const SKETCH = path.resolve(import.meta.dirname, '..');
 const REPO = path.resolve(SKETCH, '../..');
-const SOURCES = ['tests/harness.cpp', 'Engine.cpp', 'HostCmd.cpp', 'TextKeys.cpp', 'LineReader.cpp', 'Fitted.cpp', 'Fmt.cpp'];
+const SOURCES = [
+  'tests/harness.cpp', 'Engine.cpp', 'HostCmd.cpp', 'HostPort.cpp', 'TextKeys.cpp', 'LineReader.cpp', 'Fitted.cpp', 'Fmt.cpp',
+  'PhysKeys.cpp',
+];
 
 const onPath = (cmd) => spawnSync(process.platform === 'win32' ? 'where' : 'which', [cmd], { stdio: 'ignore' }).status === 0;
 const skip = !onPath('c++') && 'c++ is not on PATH';
@@ -139,11 +142,20 @@ test('A releases K holds, R hold and the loopback, and nothing else', { skip }, 
 });
 
 test('a dropped DTR releases every hold, aborts the action and turns E back on', { skip }, () => {
-  const out = run(['boot 8', '> K 12 d', '> R hold', '> E 0', '> P 34 1000', 'dtr0', '> ?']);
+  const out = run(['boot 8', '> K 12 d', '> R hold', '> E 0', '> P 34 1000', 'dtr0', 'dtr1', '> ?']);
   assert.deepEqual(edges(out), [`fitted reset @${T}`, `m 12 @${T}`, `reset 1 @${T}`, `m 12+34 @${T}`, `m 34 @${T}`, `reset 0 @${T}`, `m - @${T}`]);
   const r = replies(out);
   assert.ok(!r.includes('ERR P aborted'), 'the closed port gets no reply');
   assert.deepEqual([field(r.at(-1), 'e'), field(r.at(-1), 'held'), field(r.at(-1), 'reset')], ['1', '-', '0']);
+});
+
+test('bytes that arrive while the port is closed are discarded, not run', { skip }, () => {
+  // a host that wrote these and closed at once, or never asserted DTR
+  const out = run(['boot 0', 'dtr0', '> D on', '> K 12 d', '>> P 1', 'dtr1', '> ?']);
+  assert.deepEqual(edges(out).slice(1), []);
+  const r = replies(out);
+  assert.equal(r.length, 1, r.join('\n'));
+  assert.deepEqual([field(r[0], 'loop'), field(r[0], 'held')], ['off', '-']);
 });
 
 test('a hold that times out never aborts a timed action', { skip }, () => {
@@ -178,10 +190,18 @@ test('S maps characters and names to C64 keys', { skip }, () => {
   }
 });
 
-test('S types with SHIFT held alongside and replies after the last gap', { skip }, () => {
-  const out = run(['boot 0', '> S a"', '+199900', 'active', '+100']);
-  assert.deepEqual(edges(out).slice(1), [`m 12 @${T}`, `m - @${T + 50000}`, `m 17+73 @${T + 100000}`, `m - @${T + 150000}`]);
-  assert.deepEqual(out.slice(-2), ['active 1', `< OK S n=2 t0=${T} t1=${T + 150000}`]);
+test('S closes SHIFT 20 ms before its key, opens it 20 ms after, and replies after the last gap', { skip }, () => {
+  const out = run(['boot 0', '> S a"', '+239900', 'active', '+100']);
+  assert.deepEqual(edges(out).slice(1), [
+    `m 12 @${T}`, `m - @${T + 50000}`,
+    `m 17 @${T + 100000}`, `m 17+73 @${T + 120000}`, `m 17 @${T + 170000}`, `m - @${T + 190000}`,
+  ]);
+  assert.deepEqual(out.slice(-2), ['active 1', `< OK S n=2 t0=${T} t1=${T + 190000}`]);
+  // CTRL and C= the same way
+  assert.deepEqual(edges(run(['boot 0', '> S {ctrl-9}{c=-1}', '+300000'])).slice(1), [
+    `m 72 @${T}`, `m 40+72 @${T + 20000}`, `m 72 @${T + 70000}`, `m - @${T + 90000}`,
+    `m 75 @${T + 140000}`, `m 70+75 @${T + 160000}`, `m 75 @${T + 210000}`, `m - @${T + 230000}`,
+  ]);
 });
 
 test('S checks the whole line before typing, keeps spaces, and caps its total time', { skip }, () => {
@@ -191,12 +211,18 @@ test('S checks the whole line before typing, keeps spaces, and caps its total ti
   assert.equal(field(replies(run(['boot 0', '> S a  b', '+1000000']))[0], 'n'), '4');
   assert.deepEqual(replies(run(['boot 0', '> ST 10000 10000 abcd'])), ['ERR ST range']);
   assert.deepEqual(replies(run(['boot 0', '> S'])), ['ERR S syntax']);
+  // the modifier lead counts toward the 60 s: 3 x (10000 + 9960 + 40) is exactly 60 s
+  assert.deepEqual(replies(run(['boot 0', '> ST 10000 9960 AAA'])), []);
+  assert.deepEqual(replies(run(['boot 0', '> ST 10000 9961 AAA'])), ['ERR ST range']);
 });
 
-test('ST sets its own hold and gap', { skip }, () => {
-  const out = run(['boot 0', '> ST 20 10 ab', '+60000']);
-  assert.deepEqual(edges(out).slice(1), [`m 12 @${T}`, `m - @${T + 20000}`, `m 34 @${T + 30000}`, `m - @${T + 50000}`]);
-  assert.deepEqual(replies(out), [`OK ST n=2 t0=${T} t1=${T + 50000}`]);
+test('ST sets its own hold and gap, each at least 20 ms, so a repeated key is seen open between', { skip }, () => {
+  const out = run(['boot 0', '> ST 20 20 aa', '+80000']);
+  assert.deepEqual(edges(out).slice(1), [`m 12 @${T}`, `m - @${T + 20000}`, `m 12 @${T + 40000}`, `m - @${T + 60000}`]);
+  assert.deepEqual(replies(out), [`OK ST n=2 t0=${T} t1=${T + 60000}`]);
+  assert.deepEqual(replies(run(['boot 0', '> ST 19 20 a', '> ST 20 19 a', '> ST 20 0 a'])), [
+    'ERR ST range', 'ERR ST range', 'ERR ST range',
+  ]);
 });
 
 // --- fitted outputs ------------------------------------------------------------
@@ -288,7 +314,7 @@ test('V aborted before the CRESET_N pulse releases /RESET at once and puts J1 ba
 });
 
 test('a DTR drop during V sends nothing from the old session to the next one', { skip }, () => {
-  const out = run(['boot 24', '> V open 100', '+1500', '> A', 'dtr0', '> TIME', '> A', '+110000']);
+  const out = run(['boot 24', '> V open 100', '+1500', '> A', 'dtr0', 'dtr1', '> TIME', '> A', '+110000']);
   assert.equal(edges(out).at(-1), `reset 0 @${T + 102000}`);
   // the new session's A still gets its OK A, after V ends; nothing else arrives
   assert.deepEqual(replies(out), [`OK TIME us=${T + 1500}`, 'OK A']);
@@ -321,6 +347,32 @@ test('X can hold keys through a reset', { skip }, () => {
   assert.deepEqual(edges(out).slice(1), [
     `m 75 @${T}`, `reset 1 @${T}`, `reset 0 @${T + 50000}`, `m - @${T + 2050000}`,
   ]);
+});
+
+// --- the USB keyboard and the matrix ------------------------------------------------
+
+test('a C64 switch that two USB keys close stays closed until both are up', { skip }, () => {
+  // CapsLock latches L-SHIFT; tapping L-Shift (USB 0x68) must not open it
+  assert.deepEqual(run(['usb caps', 'usb 68 d', 'usb 68 u', 'usb caps']), ['phys 17', 'phys 17', 'phys 17', 'phys -']);
+  // R-Shift held, cursor up (0x52, typed as SHIFT+CRSR) tapped: R-SHIFT stays closed
+  assert.deepEqual(run(['usb 6c d', 'usb 52 d', 'usb 52 u', 'usb 6c u']), ['phys 64', 'phys 07+64', 'phys 64', 'phys -']);
+  // Backspace and Delete are both INST/DEL
+  assert.deepEqual(run(['usb 2a d', 'usb 4c d', 'usb 2a u', 'usb 4c u']), ['phys 00', 'phys 00', 'phys 00', 'phys -']);
+  assert.deepEqual(run(['usb 2b d']), ['not a C64 key', 'phys -']); // TAB is RESTORE
+});
+
+test('F11 holds the loopback diagonal until F12, which drops every USB keyboard closure', { skip }, () => {
+  const diag = 'phys 00+11+22+33+44+55+66+77';
+  assert.deepEqual(run(['usb 04 d', 'usb f11', 'usb 1a d', 'usb 1a u', 'usb caps', 'usb f12', 'usb 04 u']), [
+    'phys 12', diag, diag, diag, 'phys 00+11+17+22+33+44+55+66+77', 'phys -', 'phys -',
+  ]);
+});
+
+test('the matrix closes SHIFT, CTRL and C= before other keys and opens them after', { skip }, () => {
+  const mask = (...keys) => keys.reduce((m, k) => m | (1n << BigInt(parseInt(k, 8))), 0n).toString(16);
+  assert.deepEqual(run([
+    `order 0 ${mask('07', '64')}`, `order ${mask('07', '64')} 0`, `order ${mask('17', '12')} ${mask('34', '72')}`,
+  ]), ['order 64+ 07+', 'order 07- 64-', 'order 12- 17- 72+ 34+']);
 });
 
 // --- key numbers -------------------------------------------------------------------

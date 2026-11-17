@@ -34,6 +34,14 @@ static const uint32_t DEF_RESTART_MS  = 1000;    // V
 static const uint32_t MAX_SEQ_MS      = 10000;   // X total
 static const uint32_t MAX_TYPE_MS     = 60000;   // S total
 
+// Typed text has to work with however the C64 scans its keyboard: the KERNAL
+// every 1/60 s, other programs once a frame (1/50 s on PAL).  A key must be
+// seen down in one scan and up in another, so ST's hold and gap are at least
+// one 50 Hz scan, and SHIFT, CTRL and C= close a scan ahead of their key, so
+// no scan in progress sees the key without them.
+static const uint32_t MIN_TYPE_MS     = 20;      // ST hold and gap
+static const uint32_t MOD_LEAD_MS     = 20;      // S modifiers: down this long before the key, up this long after
+
 struct SeqStep
 {
    StepType Type;

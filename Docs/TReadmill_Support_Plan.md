@@ -64,13 +64,15 @@ All files go in `Source/C64_keyboard/`. Arduino builds every `.cpp` in the sketc
 | `HostCmd.cpp/.h` | Line parser with no Arduino dependencies, so it can be tested on a PC |
 | `TextKeys.cpp/.h` | Character and `{name}` to matrix key table for `S`, also free of Arduino dependencies |
 | `LineReader.cpp/.h` | Serial line reader: length cap, junk, the 500 ms partial-line drop |
+| `HostPort.cpp/.h` | The port's open/closed state and bytes into the Engine; bytes while closed are discarded |
+| `PhysKeys.cpp/.h` | The USB keyboard's closures, worked out from the USB keys held, CapsLock and F11 |
 | `Engine.cpp/.h` | Commands, timed actions, holds, timeouts, aborts and replies, over a `Hal` interface, so the host tests run it with a simulated clock |
 | `Fitted.cpp/.h`, `Fmt.cpp/.h`, `Keys.h` | Fitted flags and their EEPROM record, reply formatting, key numbers |
 | `Outputs.cpp/.h` | /RESET, Kawari, TR buttons, TOD, activity LED; open-drain helpers; the pulse timer; boot state |
 | `UsbNames.c`, `ChipSerial.h`, `BootHook.cpp` | USB product and serial strings with the chip id; the Teensy 4 boot hook |
 | `Pins.h` | Pin numbers |
 
-As built (2026-11-17): `HostLink` and `Actions` became `LineReader` and `Engine`, and `Config.h` became `Pins.h`, with the protocol's defaults in `HostCmd.h`.
+As built (2026-11-17): `HostLink` and `Actions` became `LineReader` and `Engine`, and `Config.h` became `Pins.h`, with the protocol's defaults in `HostCmd.h`. After review, `HostPort` and `PhysKeys` were added.
 
 - **Matrix merge.** Keep two 64-bit masks. The physical mask holds the USB keyboard, the Caps Lock latch and the F11 loopback. The host mask holds host commands. A switch is closed when either mask has it, and the MT8808 is written only when that OR changes. F12 clears the physical mask, resets the MT8808, then rewrites the host bits. RESTORE merges the same way: TAB key or host.
 - **Timing.** `loop()` keeps calling `usb.Task()`. Key steps are in ms and run from loop timing. Edges that need µs accuracy, at the end of an `R`, `N` or `B` pulse or the CRESET_N pulse, end from a one-shot `IntervalTimer`, so loop latency can't stretch them. TOD keeps its own `IntervalTimer`.

@@ -123,8 +123,12 @@ static bool Text(const char *After, uint32_t Hold, uint32_t Gap, Cmd &C, const c
    int errPos;
    int n = TextToStrokes(After + 1, C.Strokes, MAX_STROKES, &errPos);
    if (n < 0) FAIL(RANGE);
-   uint64_t total = 0;
-   for (int i = 0; i < n; i++) total += (C.Strokes[i].Restore ? DEF_PULSE_MS : Hold) + Gap;
+   uint64_t total = 0;   // as the Engine runs it
+   for (int i = 0; i < n; i++)
+   {
+      const TextStroke &s = C.Strokes[i];
+      total += (s.Restore ? DEF_PULSE_MS : Hold) + Gap + (s.Mods ? 2 * MOD_LEAD_MS : 0);
+   }
    if (total > MAX_TYPE_MS) FAIL(RANGE);
    C.NumStrokes = (uint8_t)n;
    C.A = Hold;
@@ -262,9 +266,9 @@ bool ParseCommand(const char *Line, Cmd &C, const char **Reason)
       C.Type = CmdType::Type;
       uint32_t hold, gap;
       if (!s.Next(v)) FAIL(SYNTAX);
-      if (!Num(v, 1, 10000, &hold, Reason)) return false;
+      if (!Num(v, MIN_TYPE_MS, 10000, &hold, Reason)) return false;
       if (!s.Next(v)) FAIL(SYNTAX);
-      if (!Num(v, 0, 10000, &gap, Reason)) return false;
+      if (!Num(v, MIN_TYPE_MS, 10000, &gap, Reason)) return false;
       return Text(s.Pos(), hold, gap, C, Reason);
    }
    if (Is(t, "N"))

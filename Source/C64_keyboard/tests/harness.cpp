@@ -8,8 +8,11 @@
 //   >> <text>           send bytes with no LF
 //   raw <hex> ...       send raw bytes
 //   +<us>               advance the clock, polling every 100 µs
-//   dtr0                the host closes the port
+//   dtr0, dtr1          the host closes the port, or opens it (it starts open)
 //   f9                  the USB keyboard's F9
+//   usb <hex> d|u       a USB key down or up (PhysKeys); prints the closures
+//   usb caps|f11|f12    CapsLock, loopback, MT8808 reset; prints the closures
+//   order <hex> <hex>   the switch changes from one key mask to another, in order
 //   ev <text>           a key/debug event line from the firmware
 //   active              print whether the engine reports activity
 //   fitrec <5 hex>      decode an EEPROM record
@@ -23,7 +26,8 @@
 #include <cstring>
 #include <string>
 #include "../Engine.h"
-#include "../LineReader.h"
+#include "../HostPort.h"
+#include "../PhysKeys.h"
 #include "../Fitted.h"
 #include "../Fmt.h"
 #include "../Keys.h"
@@ -119,16 +123,19 @@ public:
 static FakeHal    TheHal;
 static Identity   Id = { "1.0.0", "2026-01-02T03:04:05", 12345678, "teensy41" };
 static Engine     Eng(TheHal, Id);
-static LineReader Reader;
+static HostPort   Port(Eng);
+static PhysKeys   Phys;
 
 static void Feed(uint8_t c)
 {
-   switch (Reader.Feed(c, TheHal.Now))
-   {
-      case LineReader::Line: Eng.OnLine(Reader.Text()); break;
-      case LineReader::Junk: Eng.OnJunkLine(); break;
-      default: break;
-   }
+   Port.Byte(c, TheHal.Now);
+}
+
+static void PrintKeys(const char *What, uint64_t Mask)
+{
+   LineBuf b;
+   b.Keys(Mask);
+   printf("%s %s\n", What, b.C());
 }
 
 static void Advance(uint64_t us)
@@ -142,7 +149,7 @@ static void Advance(uint64_t us)
          step = TheHal.PulseEnd - TheHal.Now;
       TheHal.Now += step;
       TheHal.Expire();
-      Reader.Tick(TheHal.Now);
+      Port.Tick(TheHal.Now);
       Eng.Poll();
    }
 }
@@ -152,6 +159,7 @@ static bool Starts(const char *s, const char *p) { return strncmp(s, p, strlen(p
 int main()
 {
    char line[4096];
+   Port.SetConnected(true);
    while (fgets(line, sizeof line, stdin))
    {
       size_t n = strlen(line);
@@ -178,7 +186,36 @@ int main()
          }
       }
       else if (line[0] == '+') Advance(strtoull(line + 1, nullptr, 10));
-      else if (strcmp(line, "dtr0") == 0) { Reader.Reset(); Eng.OnDtrDrop(); }
+      else if (strcmp(line, "dtr0") == 0) Port.SetConnected(false);
+      else if (strcmp(line, "dtr1") == 0) Port.SetConnected(true);
+      else if (Starts(line, "usb "))
+      {
+         const char *a = line + 4;
+         if (strcmp(a, "caps") == 0) Phys.ToggleCaps();
+         else if (strcmp(a, "f11") == 0) { Phys.Clear(); Phys.Loopback(); }
+         else if (strcmp(a, "f12") == 0) Phys.Clear();
+         else
+         {
+            char *e;
+            unsigned long code = strtoul(a, &e, 16);
+            if (e == a || (strcmp(e, " d") != 0 && strcmp(e, " u") != 0)) return 2;
+            if (!Phys.Key((uint8_t)code, e[1] == 'd')) printf("not a C64 key\n");
+         }
+         PrintKeys("phys", Phys.Mask());
+      }
+      else if (Starts(line, "order "))
+      {
+         char *p;
+         uint64_t from = strtoull(line + 6, &p, 16);
+         uint64_t to = strtoull(p, nullptr, 16);
+         std::string s = "order";
+         ForEachMatrixChange(from, to, [&s](uint8_t k, bool On) {
+            LineBuf b;
+            b.Key(k).Ch(On ? '+' : '-');
+            s += std::string(" ") + b.C();
+         });
+         printf("%s\n", s.c_str());
+      }
       else if (strcmp(line, "f9") == 0) Eng.PhysTodToggle();
       else if (Starts(line, "ev ")) Eng.Event(line + 3);
       else if (strcmp(line, "active") == 0) printf("active %d\n", Eng.Active() ? 1 : 0);
