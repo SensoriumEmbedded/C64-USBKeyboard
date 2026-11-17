@@ -27,28 +27,7 @@
 */
 
 
-//Teensy Pin Mapping
-#define MT8808_DATA_PIN        0 // Sets selected cross switch on/off
-#define NMI_RESTORE_PIN        1 // NMI (RESTORE KEY) PIN
-#define MT8808_STROBE_PIN      2 // Strobe timing pulse (active high)
-#define MT8808_RESET_PIN      10 // Reset all MT8808 cross switches to off (active high)
-#define INDICATOR_LED_PIN     13 // LED on the Teensy
-#define EXT_PULSE_OUT_PIN     32 // External Open Collector pulse low to simulate TeensyROM menu button push
-#define EXT_TOD_CLK_OUT_PIN   25 // 50/60Hz TOD clock output to inject into CIAs
-
-const uint8_t MT8808_ADDRESS_PINS[] = 
-{
-                               3,  // AY2
-                               4,  // AY1
-                               5,  // AY0
-                               6,  // AX2
-                               7,  // AX1
-                               8,  // AX0
-};
-
-#define IntervaluS_50Hz    10000 //  1/50/2*1000000
-#define IntervaluS_60Hz     8333 //  1/60/2*1000000
-#define CurrentInterval    (TOD60n50HzSel ? IntervaluS_60Hz : IntervaluS_50Hz)
+#include "Pins.h"   //Teensy pin mapping
 
 //C64 Key Pos Symbols:
 //6 bit encoded switch matrix location, 3 bits for the X value and 3 bits for the Y
