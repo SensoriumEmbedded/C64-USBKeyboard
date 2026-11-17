@@ -103,6 +103,17 @@ test('a K hold times out at max_ms with an EV line, even with E 0', { skip }, ()
   assert.deepEqual(replies(out).slice(-1), ['EV K 77 timeout']);
 });
 
+test('holds time out one by one at their own deadlines; K d again restarts a hold', { skip }, () => {
+  const out = run([
+    'boot 0', '> K 12 d 100', '> K 34 d 50', '+20000', '> K 34 d 100', '> K 56 d 30', '> K 56 u', '+200000',
+  ]);
+  assert.deepEqual(edges(out).slice(1), [
+    `m 12 @${T}`, `m 12+34 @${T}`, `m 12+34+56 @${T + 20000}`, `m 12+34 @${T + 20000}`,
+    `m 34 @${T + 100000}`, `m - @${T + 120000}`,
+  ]);
+  assert.deepEqual(replies(out).slice(-2), ['EV K 12 timeout', 'EV K 34 timeout']);
+});
+
 test('P holds for hold_ms, reports the closing and opening edges, and replies after the gap', { skip }, () => {
   const out = run(['boot 0', '> P 12 100 20', '+100000', 'active', '+20000']);
   assert.deepEqual(edges(out).slice(1), [`m 12 @${T}`, `m - @${T + 100000}`]);

@@ -1,6 +1,18 @@
 #include "Fmt.h"
 #include <string.h>
 
+static char Lower(char c) { return (c >= 'A' && c <= 'Z') ? (char)(c - 'A' + 'a') : c; }
+
+bool SameWord(const char *Text, int Len, const char *Word)
+{
+   int i = 0;
+   for (; i < Len; i++)
+   {
+      if (!Word[i] || Lower(Text[i]) != Lower(Word[i])) return false;
+   }
+   return Word[i] == 0;
+}
+
 LineBuf &LineBuf::Ch(char c)
 {
    if (N < Cap) B[N++] = c;

@@ -33,14 +33,7 @@ uint8_t FitFromName(const char *Name, int Len)
 {
    for (const auto &f : FitNames)
    {
-      int i = 0;
-      for (; i < Len && f.Name[i]; i++)
-      {
-         char c = Name[i];
-         if (c >= 'A' && c <= 'Z') c = (char)(c - 'A' + 'a');
-         if (c != f.Name[i]) break;
-      }
-      if (i == Len && !f.Name[i]) return f.Bit;
+      if (SameWord(Name, Len, f.Name)) return f.Bit;
    }
    return 0;
 }

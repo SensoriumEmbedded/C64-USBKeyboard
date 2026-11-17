@@ -21,7 +21,7 @@ void Outputs_SetHost(OutLine Line, bool Asserted);
 void Outputs_SetPhys(OutLine Line, bool Asserted);
 void Outputs_StartPulse(OutLine Line, uint32_t Us);
 bool Outputs_PulseDone(uint64_t *T0, uint64_t *T1);
-void Outputs_StopPulse(uint64_t *T0, uint64_t *T1);
+void Outputs_StopPulse();
 void Outputs_SetJ1(bool Closed);
 void Outputs_SetTod(uint8_t Mode);                 // TOD_OFF, TOD_50, TOD_60
 void Outputs_LedBlink();                           // a 50 ms blink for an accepted command

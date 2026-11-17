@@ -1,5 +1,5 @@
 /*
-  Small text helpers for host protocol replies.  No Arduino dependencies:
+  Small text helpers for host protocol lines.  No Arduino dependencies:
   64-bit numbers are formatted here because printf's %llu is not available
   in every Teensy C library build.
 */
@@ -22,6 +22,9 @@ private:
    char B[Cap + 1] = {};
    int  N = 0;
 };
+
+// Text[0..Len) is Word, ignoring ASCII case: command names, keywords, {names}, outputs
+bool SameWord(const char *Text, int Len, const char *Word);
 
 // __DATE__ ("Nov 16 2026") and __TIME__ ("14:41:00") to "2026-11-16T14:41:00".
 // Returns false, with Out set to "unknown", if either is malformed.

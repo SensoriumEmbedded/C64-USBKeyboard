@@ -18,7 +18,7 @@ public:
    virtual void SetLine(OutLine Line, bool Asserted) = 0;     // the host's own hold on a line
    virtual void StartPulse(OutLine Line, uint32_t Us) = 0;    // asserts now, releases Us later, exactly
    virtual bool PulseDone(uint64_t *T0, uint64_t *T1) = 0;    // true once released, with its edge times
-   virtual void StopPulse(uint64_t *T0, uint64_t *T1) = 0;    // releases a running pulse now
+   virtual void StopPulse() = 0;                              // releases a running pulse now
    virtual void SetJ1(bool Closed) = 0;
    virtual void SetTod(uint8_t Mode) = 0;                     // TOD_OFF, TOD_50, TOD_60
    virtual void ApplyFitted(uint8_t Flags) = 0;               // pin setup for fitted and unfitted outputs
@@ -78,6 +78,7 @@ private:
    // holds
    uint64_t HoldMask = 0;
    uint64_t HoldDeadline[64] = {};
+   uint64_t NextHold = ~(uint64_t)0;   // no hold expires before this; Poll scans from then
    bool     ResetHeld = false;
    uint64_t ResetDeadline = 0;
    bool     LoopOn = false;

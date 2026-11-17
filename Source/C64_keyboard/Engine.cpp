@@ -169,15 +169,19 @@ void Engine::Run(const Cmd &c)
          Ok(b);
          return;
       case CmdType::KeyDown:
+      {
+         uint64_t deadline = now + (uint64_t)c.A * 1000;
          for (int k = 0; k < 64; k++)
          {
-            if (c.Keys & KeyBit((uint8_t)k)) HoldDeadline[k] = now + (uint64_t)c.A * 1000;
+            if (c.Keys & KeyBit((uint8_t)k)) HoldDeadline[k] = deadline;
          }
+         if (deadline < NextHold) NextHold = deadline;
          HoldMask |= c.Keys;
          UpdateMatrix();
          b.Str("OK K t=").U64(now);
          Ok(b);
          return;
+      }
       case CmdType::KeyUp:
          HoldMask &= ~c.Keys;
          UpdateMatrix();
@@ -510,8 +514,7 @@ bool Engine::AbortAction(bool FromA, bool Silent)
    }
    if (Pulsing)
    {
-      uint64_t a, b;
-      H.StopPulse(&a, &b);
+      H.StopPulse();
       Pulsing = false;
    }
    Waiting = false;
@@ -535,12 +538,17 @@ void Engine::Poll()
    if (Running) Step();
 
    uint64_t now = H.NowUs();
-   if (HoldMask)
+   if (HoldMask && now >= NextHold)
    {
+      // NextHold is a lower bound: K u and A never raise it, so a scan here
+      // may find nothing due yet.  It leaves NextHold exact.
       uint64_t expired = 0;
+      NextHold = ~(uint64_t)0;
       for (int k = 0; k < 64; k++)
       {
-         if ((HoldMask & KeyBit((uint8_t)k)) && now >= HoldDeadline[k]) expired |= KeyBit((uint8_t)k);
+         if (!(HoldMask & KeyBit((uint8_t)k))) continue;
+         if (now >= HoldDeadline[k]) expired |= KeyBit((uint8_t)k);
+         else if (HoldDeadline[k] < NextHold) NextHold = HoldDeadline[k];
       }
       if (expired)
       {

@@ -89,18 +89,15 @@ public:
       *b = PulseT1;
       return true;
    }
-   void StopPulse(uint64_t *a, uint64_t *b) override
+   void StopPulse() override
    {
       if (PulseOn)
       {
          Pulse[PulseIdx] = false;
          PulseOn = false;
-         PulseT1 = Now;
          Drive(PulseIdx, Now);
       }
       PulseDoneFlag = false;
-      *a = PulseT0;
-      *b = PulseT1;
    }
    void SetJ1(bool c) override { Log(c ? "j1 closed" : "j1 open", Now); }
    void SetTod(uint8_t m) override { Log(m == TOD_OFF ? "tod off" : (m == TOD_50 ? "tod 50" : "tod 60"), Now); }

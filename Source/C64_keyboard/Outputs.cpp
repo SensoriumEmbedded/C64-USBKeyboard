@@ -207,25 +207,18 @@ bool Outputs_PulseDone(uint64_t *T0, uint64_t *T1)
    return true;
 }
 
-void Outputs_StopPulse(uint64_t *T0, uint64_t *T1)
+void Outputs_StopPulse()
 {
-   uint32_t t1;
+   IrqLock lock;
+   if (PulseIdx >= 0)
    {
-      IrqLock lock;
-      if (PulseIdx >= 0)
-      {
-         PulseTimer.end();
-         int i = PulseIdx;
-         PulseBits &= (uint8_t)~(1 << i);
-         Drive(i);
-         PulseT1Micros = micros();
-         PulseIdx = -1;
-      }
-      PulseFinished = false;
-      t1 = PulseT1Micros;
+      PulseTimer.end();
+      int i = PulseIdx;
+      PulseBits &= (uint8_t)~(1 << i);
+      Drive(i);
+      PulseIdx = -1;
    }
-   *T0 = PulseT0;
-   *T1 = Extend(t1);
+   PulseFinished = false;
 }
 
 // --- TOD -------------------------------------------------------------------------

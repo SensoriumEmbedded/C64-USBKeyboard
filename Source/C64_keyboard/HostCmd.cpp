@@ -1,5 +1,6 @@
 #include "HostCmd.h"
 #include "Fitted.h"
+#include "Fmt.h"
 #include <string.h>
 
 static const char SYNTAX[] = "syntax";
@@ -40,19 +41,7 @@ private:
    const char *E;
 };
 
-static bool Is(const Tok &t, const char *Word)
-{
-   int i = 0;
-   for (; i < t.Len; i++)
-   {
-      char c = t.P[i];
-      if (c >= 'A' && c <= 'Z') c = (char)(c - 'A' + 'a');
-      char w = Word[i];
-      if (w >= 'A' && w <= 'Z') w = (char)(w - 'A' + 'a');
-      if (!w || c != w) return false;
-   }
-   return Word[i] == 0;
-}
+static bool Is(const Tok &t, const char *Word) { return SameWord(t.P, t.Len, Word); }
 
 // Decimal number in [Min, Max]
 static bool Num(const Tok &t, uint32_t Min, uint32_t Max, uint32_t *v, const char **Reason)

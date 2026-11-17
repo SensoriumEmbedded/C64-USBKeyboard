@@ -4,6 +4,7 @@
 */
 #include "TextKeys.h"
 #include "Keys.h"
+#include "Fmt.h"
 #include <string.h>
 
 #define NOKEY 0xFF
@@ -64,19 +65,6 @@ static const KeyName KeyNames[] =
    { "restore", NOKEY },
 };
 
-static char Lower(char c) { return (c >= 'A' && c <= 'Z') ? (char)(c - 'A' + 'a') : c; }
-
-// Case-insensitive compare of Text[0..Len) with a NUL-terminated lowercase name
-static bool NameIs(const char *Text, int Len, const char *Name)
-{
-   int i = 0;
-   for (; i < Len; i++)
-   {
-      if (!Name[i] || Lower(Text[i]) != Name[i]) return false;
-   }
-   return Name[i] == 0;
-}
-
 static bool CharStroke(char c, TextStroke *Out)
 {
    if (c < 0x20 || c > 0x7E) return false;
@@ -94,7 +82,7 @@ static bool NameStroke(const char *Text, int Len, TextStroke *Out)
    if (Len == 1 && Text[0] != '{' && Text[0] != '}') return CharStroke(Text[0], Out);
    for (const KeyName &n : KeyNames)
    {
-      if (!NameIs(Text, Len, n.Name)) continue;
+      if (!SameWord(Text, Len, n.Name)) continue;
       if (n.Key == NOKEY)
       {
          Out->Key = 0;
@@ -122,7 +110,7 @@ static bool BracedStroke(const char *Text, int Len, TextStroke *Out)
    for (const auto &m : Mods)
    {
       int pl = (int)strlen(m.Prefix);
-      if (Len > pl && NameIs(Text, pl, m.Prefix))
+      if (Len > pl && SameWord(Text, pl, m.Prefix))
       {
          if (!NameStroke(Text + pl, Len - pl, Out) || Out->Restore) return false;
          Out->Mods |= m.Mod;

@@ -96,7 +96,7 @@ public:
    void SetLine(OutLine Line, bool Asserted) override { Outputs_SetHost(Line, Asserted); }
    void StartPulse(OutLine Line, uint32_t Us) override { Outputs_StartPulse(Line, Us); }
    bool PulseDone(uint64_t *T0, uint64_t *T1) override { return Outputs_PulseDone(T0, T1); }
-   void StopPulse(uint64_t *T0, uint64_t *T1) override { Outputs_StopPulse(T0, T1); }
+   void StopPulse() override { Outputs_StopPulse(); }
    void SetJ1(bool Closed) override { Outputs_SetJ1(Closed); }
    void SetTod(uint8_t Mode) override { Outputs_SetTod(Mode); }
    void ApplyFitted(uint8_t Flags) override { Outputs_ApplyFitted(Flags); }
