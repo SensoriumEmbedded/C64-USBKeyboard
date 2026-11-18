@@ -68,16 +68,29 @@ extern "C" uint32_t set_arm_clock(uint32_t frequency);
 
 // --- host protocol ----------------------------------------------------------------
 
-// The host has the port open: DTR, and on a Teensy 4 the bus not suspended.
-// The core never clears DTR when the cable is pulled or the PC sleeps; the
-// bus suspends then, so that counts as the host closing the port.
+// The host has the port open: DTR, and the bus not suspended.  The core never
+// clears DTR when the cable is pulled or the PC sleeps; the bus suspends then,
+// so that counts as the host closing the port.
 static bool HostConnected()
 {
-   if (!Serial.dtr()) return false;
 #if defined(__IMXRT1062__)
    if (USB1_PORTSC1 & USB_PORTSC1_SUSP) return false;
+#elif defined(__MK66FX1M0__)
+   // No suspend flag to poll: the core clears USB0_ISTAT's SLEEP bit in its
+   // interrupt.  A live bus has a start-of-frame every 1 ms, and the frame
+   // number stops when the bus suspends (after 3 ms idle) or the cable is pulled.
+   static uint16_t LastFrame = 0;
+   static uint32_t LastChange = 0;
+   uint16_t frame = (uint16_t)(USB0_FRMNUML | ((USB0_FRMNUMH & 7) << 8));
+   uint32_t now = millis();
+   if (frame != LastFrame)
+   {
+      LastFrame = frame;
+      LastChange = now;
+   }
+   else if (now - LastChange > 5) return false;
 #endif
-   return true;
+   return Serial.dtr();
 }
 
 static uint8_t LoadFitted()
@@ -192,10 +205,7 @@ static void KeyTask()
 
 void setup()
 {
-#if !defined(__IMXRT1062__)
-   Matrix_EarlyInit();     //Teensy 4 does these in its boot hook (BootHook.cpp)
-   Outputs_EarlyInit();
-#endif
+   //Matrix_EarlyInit and Outputs_EarlyInit already ran, from the boot hook (BootHook.cpp)
 #ifdef ARDUINO_TEENSY41
    set_arm_clock(180000000);  //slow down Teensy 4.1 to match 3.6 default, otherwise too fast for 8808.
       //Could add delays to SetSwitch, but slower CPU runs cooler and uses less power

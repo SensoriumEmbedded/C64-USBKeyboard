@@ -7,7 +7,7 @@ Protocol version: **1** (`proto=1` in the `?` reply).
 ## Connection
 
 - USB CDC serial on the Teensy's micro-USB port. The baud rate is ignored, with one exception: never open the port at 134 baud, which reboots a Teensy into its bootloader.
-- USB serial string `C64USBKeyboard-<chipid>`, with the chip id in decimal. Product string `C64 USB Keyboard`. Find the board by its serial string without opening any port.
+- USB serial string `C64USBKeyboard_<chipid>`, with the chip id in decimal (an underscore: pyserial on Windows drops a serial string with a dash). Product string `C64 USB Keyboard`. Find the board by its serial string without opening any port.
 - The host must assert DTR, which pyserial and most terminals do by default. When DTR drops (the host closes the port), or the USB bus suspends (the cable is pulled or the PC sleeps), the board releases everything the host holds (see "Safety"). Both count as a DTR drop below.
 - Bytes that arrive while DTR is low, or the bus is suspended, are discarded, never run. A command written just before the port closes may be dropped; wait for its reply before closing.
 - The board powers from the C64. Its port disappears whenever the C64 is off and appears within about a second of power-on.
@@ -141,7 +141,7 @@ Every time argument is optional; without one the default applies.
 
 | Command | Reply |
 |---------|-------|
-| `?` | `OK ? proto=1 name=C64USBKeyboard fw=<x.y.z> build=<yyyy-mm-ddThh:mm:ss> chip=<decimal> mcu=teensy41 fitted=<list> held=<keys> reset=<0\|1\|-> tod=<50\|60\|off\|-> j1=<open\|closed\|-> loop=<on\|off> e=<0\|1>` |
+| `?` | `OK ? proto=1 name=C64USBKeyboard fw=<x.y.z> build=<yyyy-mm-ddThh:mm:ss> chip=<decimal> mcu=<teensy41\|teensy36> fitted=<list> held=<keys> reset=<0\|1\|-> tod=<50\|60\|off\|-> j1=<open\|closed\|-> loop=<on\|off> e=<0\|1>` |
 | `TIME` | `OK TIME us=<µs>` |
 | `K`, `R hold`, `R release` | `OK K t=<µs>`, `OK R t=<µs>` |
 | `P`, `N`, `R <us>`, `B` | `OK <CMD> t0=<µs> t1=<µs>` |

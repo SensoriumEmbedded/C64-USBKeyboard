@@ -1,14 +1,16 @@
 /*
   USB product and serial number strings, replacing the core's weak defaults
   ("USB Serial" and a bare number), so a host finds the board by its serial
-  string without opening any port: C64USBKeyboard-<chip id>.
+  string without opening any port: C64USBKeyboard_<chip id>.  Letters, digits
+  and the underscore only: pyserial on Windows takes a non-composite device's
+  serial from its instance id and drops it when it has anything else (a '-').
   Adapted from TeensyROM's UsbNames.c (same author).
 
   C only: usb_string_descriptor_struct ends in a flexible array member, and
   these initializers are valid C99 but not reliably accepted by g++.
-  Teensy 4 only; a Teensy 3.6 keeps the core's strings.
+  Teensy 4.1 and 3.6; both cores declare these strings weak.
 */
-#if defined(__IMXRT1062__)
+#if defined(__IMXRT1062__) || defined(__MK66FX1M0__)
 
 #include "usb_names.h"
 #include "avr_functions.h"
@@ -20,8 +22,8 @@
 #define PRODUCT_NAME     {'C','6','4',' ','U','S','B',' ','K','e','y','b','o','a','r','d'}
 #define PRODUCT_NAME_LEN 16
 
-#define SERIAL_BASE_LEN  15   // "C64USBKeyboard-"
-#define SERIAL_NAME      {'C','6','4','U','S','B','K','e','y','b','o','a','r','d','-','0','0','0','0','0','0','0','0'}
+#define SERIAL_BASE_LEN  15   // "C64USBKeyboard_"
+#define SERIAL_NAME      {'C','6','4','U','S','B','K','e','y','b','o','a','r','d','_','0','0','0','0','0','0','0','0'}
 #define SERIAL_NAME_LEN  23
 
 // Do not change this part.  This exact format is required by USB.

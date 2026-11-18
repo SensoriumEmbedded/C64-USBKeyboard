@@ -8,7 +8,7 @@ How TReadmill (the TeensyROM hardware-in-the-loop test suite) will drive this bo
 - Add a line-based text command protocol on the Teensy's USB serial port. The physical USB keyboard keeps working, and host key presses are OR'd with it.
 - Keys go in as raw matrix positions (what TReadmill uses) or as typed text (`S`), for other host programs.
 - Every output wired off the PCB (TOD, /RESET, Kawari, TR buttons) is optional. The board drives only the outputs marked fitted, and none is fitted by default.
-- The prototype's Teensy is a 4.1, and the firmware targets it. The 3.6 keeps building.
+- The firmware targets the Teensy 4.1 and runs on the 3.6 as well, with the same protocol, USB names and suspend handling. The prototype runs a 3.6 for now; a 4.1 is validated later.
 - Move the wiring onto a v0.2 PCB once the prototype passes TReadmill's station tests.
 
 ## Decisions
@@ -21,17 +21,17 @@ How TReadmill (the TeensyROM hardware-in-the-loop test suite) will drive this bo
 | 4 | Spare outputs | TR Program pin: not needed. TR ALT button: nice to have. |
 | 5 | TOD follows the video standard | No. The host sets it; a board with TOD fitted boots at 50 Hz. |
 | 6 | Hardware | Hand-wired prototype on v0.1, v0.2 PCB later |
-| 7 | USB names | Serial `C64USBKeyboard-<chipid>`, product `C64 USB Keyboard` |
+| 7 | USB names | Serial `C64USBKeyboard_<chipid>`, product `C64 USB Keyboard` |
 | 8 | Off-PCB outputs | Optional per board, marked fitted in the board's EEPROM (`F`). None is fitted by default; the TOD and TR button wires aren't normally connected. |
 
 ## Bench checks before wiring
 
 1. **Reminder: check that the board Teensy's VUSB–VIN pad is cut** ([PCB_Assembly.md](../PCB/PCB_Assembly.md), option 1). TReadmill holds the board's USB port open even while the C64 is off. With the pad uncut, the PC back-powers the C64 and the Kawari through the board. With it cut, the board's USB port disappears whenever the C64 is off. TReadmill treats that like the TR+ being off.
-2. Find the Kawari's CRESET_N pad. Check continuity to the T20 FPGA's CRESET_N pin, which has a 3.3 V pull-up. It's probably one of the programming pads.
-3. Identify the signal pin of the Kawari's J1 header (the video-standard switch), meaning the pin that isn't GND.
+2. Find the Kawari's CRESET_N pad. Check continuity to the T20 FPGA's CRESET_N pin, which has a 3.3 V pull-up. It's probably one of the programming pads. The Kawari repo has no schematic or PCB files; its Mini README (`boards/rev_4H`) only says CRESET must be grounded for SPI flash programming, so look for the SPI programming header or pads. Efinix's T20 Pinout (T20-PINOUT.xlsx, from efinixinc.com) puts CRESET_N on pin 35 of the Mini's T20Q144, next to CDONE on 34, and on ball P1 of the Large's T20F256. On the Mini, it's the RST pad of the 7 programming pads beside the LED. The Kawari's Raspberry Pi flashing notes (`util/raspi/README.md`) give the layout for Mini rev 1.3/1.4: top row MISO, CS, +3V, RST; bottom row GND, MOSI, CLK. RST is the left pad of a solder bridge that's normally open; leave it open and wire to that pad. Confirm with a beep to pin 35, power off. The data sheet (DST20) gives CRESET_N an internal weak pull-up and a 320 ns minimum low pulse. Don't confuse it with the pads labeled "Reset", which reset the Kawari's saved settings to defaults when shorted with power on, or the Large's "RST" pad, which senses the 6510's reset.
+3. Identify the signal pin of the Kawari's J1 header (the video-standard switch), meaning the pin that isn't GND. In the Kawari's pin constraints it's the FPGA input `standard_sw` (Mini: GPIOR_154, Large: GPIOL_22), 3.3 V LVCMOS with the FPGA's weak pull-up, so closing the switch pulls it to GND. The Kawari docs say it reads the switch only at a cold boot; reconfiguring through CRESET_N counts as one. On the bench (2026-11-17, Kawari Mini Rev1.5, J1's signal pad and the RST pad wired), `V closed` and `V open` switched between NTSC and PAL every time, as the TR+ menu measured it, including a `V` interrupted by `A` or by closing the port.
 4. Once `V` works (step 5 under "Order of work"), measure the Kawari's restart time on the scope in both standards. Set the restart hold to about twice the longer one.
 
-**Flashing with a TR attached.** The board and the TR+ are both Teensy 4.1s, so either hex loads onto either board without complaint (a 3.6 used to refuse). Pick the keyboard board's port by its serial string. With two Teensys attached and only `-port` given, `teensy_post_compile` can reboot the other one.
+**Flashing with a TR attached.** With a 4.1 on the board, the board and the TR+ are both Teensy 4.1s, so either hex loads onto either board without complaint (a 3.6 used to refuse). Pick the keyboard board's port by its serial string. With two Teensys attached and only `-port` given, `teensy_post_compile` can reboot the other one.
 
 ## Prototype wiring
 
@@ -69,7 +69,7 @@ All files go in `Source/C64_keyboard/`. Arduino builds every `.cpp` in the sketc
 | `Engine.cpp/.h` | Commands, timed actions, holds, timeouts, aborts and replies, over a `Hal` interface, so the host tests run it with a simulated clock |
 | `Fitted.cpp/.h`, `Fmt.cpp/.h`, `Keys.h` | Fitted flags and their EEPROM record, reply formatting, key numbers |
 | `Outputs.cpp/.h` | /RESET, Kawari, TR buttons, TOD, activity LED; open-drain helpers; the pulse timer; boot state |
-| `UsbNames.c`, `ChipSerial.h`, `BootHook.cpp` | USB product and serial strings with the chip id; the Teensy 4 boot hook |
+| `UsbNames.c`, `ChipSerial.h`, `BootHook.cpp` | USB product and serial strings with the chip id; the boot hook |
 | `Pins.h` | Pin numbers |
 
 As built (2026-11-17): `HostLink` and `Actions` became `LineReader` and `Engine`, and `Config.h` became `Pins.h`, with the protocol's defaults in `HostCmd.h`. After review, `HostPort` and `PhysKeys` were added.
@@ -95,7 +95,7 @@ As built (2026-11-17): `HostLink` and `Actions` became `LineReader` and `Engine`
 
   A firmware that adds a field reads the older versions it knows and fills the new field with its default. Only `F` writes the record, so loading defaults never writes to the EEPROM. A 15-second Teensy restore wipes the EEPROM and puts the board back to defaults.
 - **TOD.** `T` changes the interval with `IntervalTimer::update()`, which takes effect at the next period, so there's no runt pulse. `off` ends the timer and leaves the pin level steady.
-- **Identity.** Adapt TeensyROM's `Source/Teensy/MinimalBoot/Common/UsbNames.c` (fills the strings from the chip id before `usb_init()`). The Teensy 3.6 has no `startup_middle_hook`, so it keeps PJRC's default strings unless a 3.6 board is ever put on a station.
+- **Identity.** Adapt TeensyROM's `Source/Teensy/MinimalBoot/Common/UsbNames.c` (fills the strings from the chip id before `usb_init()`). The Teensy 3.6 gets the same strings: its core's strings are weak too, its core calls `startup_middle_hook` before `usb_init()` as well, and `ChipSerial.h` reads its chip id the way the core does. A 3.6 has no suspend bit to poll, so `HostConnected()` treats a frame number that hasn't moved for 5 ms as a suspended bus.
 
 ## Host protocol (draft)
 
@@ -200,7 +200,7 @@ On a TReadmill station (tier 1, from TReadmill's list):
   | `kawari` and `reset` | `region_switch` (with a switchable machine) |
 
   A station whose board was never marked fails safe: its tests skip, and the skip reason names the `F <output> 1` to send. TReadmill only reads `?` and `F ?`; it never writes `F`.
-- Skip `C64USBKeyboard-*` serial strings in `find_port()`'s fallback (`treadmill/link/discover.py`), matched case-insensitively. Never probe the board with TR tokens or 134 baud.
+- Skip `C64USBKeyboard_*` serial strings in `find_port()`'s fallback (`treadmill/link/discover.py`), matched case-insensitively. Never probe the board with TR tokens or 134 baud.
 - Map mfg's `ExternalReset` (`treadmill/mfg.py`) to `R` with its default. `kawari.py` re-applies `V` after every power cycle, since `V` doesn't persist. Set TOD at session start.
 - Add a fake board in `selftest/`, and a test pinned to `Docs/Host_Protocol.md`.
 - Add the board-less open (BACKLOG item 13).

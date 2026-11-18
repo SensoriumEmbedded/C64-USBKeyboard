@@ -1,13 +1,11 @@
 /*
-  Teensy 4 boot hook.  The core (cores/teensy4/startup.c) calls
-  startup_middle_hook after memory, clocks and pins are up, before usb_init()
-  and its ~300 ms start-up delay, and before the C++ constructors and setup().
-  So the matrix is open and every output released within milliseconds of
-  power-on, and the USB strings are final before the host reads them.
-  A Teensy 3.6 has no such hook; setup() does the same there, later.
+  Boot hook.  The core calls startup_middle_hook after clocks and pins are up
+  (and on a Teensy 4, memory), before usb_init() and its ~300 ms start-up
+  delay, and before the C++ constructors and setup(): cores/teensy4/startup.c
+  on a Teensy 4, cores/teensy3/pins_teensy.c on a 3.6.  So the matrix is open
+  and every output released within milliseconds of power-on, and the USB
+  strings are final before the host reads them.
 */
-#if defined(__IMXRT1062__)
-
 #include <Arduino.h>
 #include "Matrix.h"
 #include "Outputs.h"
@@ -20,5 +18,3 @@ extern "C" FLASHMEM void startup_middle_hook(void)
    Outputs_EarlyInit();
    UsbNames_AppendChipId();
 }
-
-#endif
