@@ -3,14 +3,12 @@
 /*
   C64 USB keyboard - Commodore USB Keyboard Interface
 
-  Rewritten for Teensy 3.6/4.1 and added:
-    Raw keypresss detection, Shift special keys, symbol mapping, clarity, & bug fixes
-    Host protocol on the USB serial port (Docs/Host_Protocol.md)
-    Copyright (c) 2023 Sensorium Embedded
-    Written by Travis Smith
+  Copyright (c) 2023-2026 Sensorium Embedded
+  Written by Travis Smith
+  Features: README.md. Host protocol on the USB serial port: Docs/Host_Protocol.md
 
-  Original code and C64 Key Pos Mapping:
-    C64keyboard - Commodore Keyboard library
+  C64 Key Position Mapping:
+    C64keyboard - Commodore Keyboard library (https://github.com/Hartland/C64-Keyboard)
     Copyright (c) 2022 Hartland PC LLC
     Written by Robert VanHazinga
 

@@ -53,6 +53,7 @@ Protocol version: **1** (`proto=1` in the `?` reply).
   | `EV f10 menu pulse` | F10 pulsed the TR menu button (`EV f10 menu notfitted`) |
   | `EV f11 loopback` | F11 set the loopback diagonal |
   | `EV f12 mt8808-reset` | F12 reset the MT8808; host closures are restored |
+  | `EV key queue overflow, mt8808-reset` | USB key events arrived faster than the board could queue them. Every USB keyboard closure is dropped and the MT8808 reset, so no key sticks; host closures are restored |
 
 ## Keys
 
@@ -98,7 +99,7 @@ Every line wired off the PCB is optional, and a board drives only the ones marke
 
 | Output | What it drives | Commands that need it |
 |--------|----------------|-----------------------|
-| `tod` | TOD clock into the CIAs (pin 25) | `T 50\|60\|off`, physical F9 |
+| `tod` | The C64's TOD clock (pin 25) | `T 50\|60\|off`, physical F9 |
 | `menu` | TR menu button (pin 32) | `B menu`, `X` step `b menu`, physical F10 |
 | `alt` | TR ALT button (pin 28) | `B alt`, `X` step `b alt` |
 | `reset` | C64 /RESET through a transistor (pin 24) | `R`, `X` step `r`, `V` |
@@ -155,7 +156,7 @@ Every time argument is optional; without one the default applies.
 | `F`, `F ?` | `OK F fitted=<list>` |
 | `A` | `OK A` |
 
-A list is comma-separated (`fitted=tod,menu,reset`), keys are `+`-joined (`held=17+12`), and `-` means none or not fitted. Queries about an output that isn't fitted still answer `OK`, with `-` for its values. `held` lists the keys held by `K`.
+A list is comma-separated (`fitted=tod,menu,reset`), keys are `+`-joined (`held=17+12`), and `-` means none or not fitted. Queries about an output that isn't fitted still answer `OK`, with `-` for its values. `held` lists the keys held by `K`. `loop` is the host's `D`; the USB keyboard's F11 loopback isn't reported.
 
 ### Typed text
 
@@ -183,7 +184,7 @@ Names, in braces:
 | `{f2}`, `{f4}`, `{f6}`, `{f8}` | SHIFT+F1, SHIFT+F3, SHIFT+F5, SHIFT+F7 |
 | `{stop}`, `{run}` | RUN/STOP, SHIFT+RUN/STOP |
 | `{restore}` | A 50 ms RESTORE pulse |
-| `{ctrl-<k>}`, `{c=-<k>}`, `{shift-<k>}` | CTRL, C= or SHIFT held with `<k>`: one character or a name without braces, as in `{ctrl-9}`, `{c=-1}`, `{shift-return}` |
+| `{ctrl-<k>}`, `{c=-<k>}`, `{shift-<k>}` | CTRL, C= or SHIFT held with `<k>`: one character or a name without braces, other than `restore`, as in `{ctrl-9}`, `{c=-1}`, `{shift-return}` |
 
 ### Sequences
 
@@ -218,7 +219,7 @@ The J1 setting lasts until the C64 powers off. The board powers down with it, an
 
 ```
 > ?
-< OK ? proto=1 name=C64USBKeyboard fw=1.0.0 build=2026-11-20T10:12:44 chip=14470230 mcu=teensy41 fitted=tod,menu,reset held=- reset=0 tod=50 j1=- loop=off e=1
+< OK ? proto=1 name=C64USBKeyboard fw=1.0.0 build=2026-11-20T10:12:44 chip=12345678 mcu=teensy41 fitted=tod,menu,reset held=- reset=0 tod=50 j1=- loop=off e=1
 > E 0
 < OK E e=0
 > R
