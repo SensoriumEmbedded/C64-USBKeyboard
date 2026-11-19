@@ -13,6 +13,7 @@
 #if defined(__IMXRT1062__) || defined(__MK66FX1M0__)
 
 #include "usb_names.h"
+#include "BuildStamp.h"
 #include "avr_functions.h"
 #include "avr/pgmspace.h"
 #include "ChipSerial.h"

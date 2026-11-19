@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include "Outputs.h"
+#include "BuildStamp.h"
 #include "Pins.h"
 #include "Fitted.h"
 

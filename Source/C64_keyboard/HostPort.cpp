@@ -1,4 +1,5 @@
 #include "HostPort.h"
+#include "BuildStamp.h"
 
 void HostPort::SetConnected(bool Connected)
 {

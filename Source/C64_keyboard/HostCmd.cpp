@@ -1,4 +1,5 @@
 #include "HostCmd.h"
+#include "BuildStamp.h"
 #include "Fitted.h"
 #include "Fmt.h"
 #include <string.h>

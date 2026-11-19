@@ -1,4 +1,5 @@
 #include "Fitted.h"
+#include "BuildStamp.h"
 #include "Fmt.h"
 
 static const struct { const char *Name; uint8_t Bit; } FitNames[] =

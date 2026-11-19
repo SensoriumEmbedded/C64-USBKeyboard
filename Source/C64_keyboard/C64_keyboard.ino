@@ -28,6 +28,7 @@
 */
 
 #include "C64keyboard.h"
+#include "BuildStamp.h"
 #include <USBHost_t36.h>
 #include <EEPROM.h>
 #include <stdarg.h>
@@ -131,7 +132,6 @@ static TeensyHal  TheHal;
 static Identity   Id;
 static Engine     Host(TheHal, Id);
 static HostPort   Port(Host);
-static char       BuildStr[24];
 
 static void HostSerialTask()
 {
@@ -210,9 +210,8 @@ void setup()
 #endif
    Matrix_Begin();
 
-   FormatBuild(__DATE__, __TIME__, BuildStr, sizeof BuildStr);
    Id.Fw = KB_FW_VERSION;
-   Id.Build = BuildStr;
+   Id.Build = BuildStamp_Get();   // the newest compile time of the sketch's files (BuildStamp.h)
    Id.Chip = KB_ChipSerialNum();
    Id.Mcu = KB_MCU;
    Host.Begin(LoadFitted());

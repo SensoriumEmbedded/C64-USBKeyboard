@@ -156,7 +156,7 @@ Every time argument is optional; without one the default applies.
 | `F`, `F ?` | `OK F fitted=<list>` |
 | `A` | `OK A` |
 
-A list is comma-separated (`fitted=tod,menu,reset`), keys are `+`-joined (`held=17+12`), and `-` means none or not fitted. Queries about an output that isn't fitted still answer `OK`, with `-` for its values. `held` lists the keys held by `K`. `loop` is the host's `D`; the USB keyboard's F11 loopback isn't reported.
+`build` is the newest compile time among the firmware's source files, so it changes whenever any of them is rebuilt. A list is comma-separated (`fitted=tod,menu,reset`), keys are `+`-joined (`held=17+12`), and `-` means none or not fitted. Queries about an output that isn't fitted still answer `OK`, with `-` for its values. `held` lists the keys held by `K`. `loop` is the host's `D`; the USB keyboard's F11 loopback isn't reported.
 
 ### Typed text
 

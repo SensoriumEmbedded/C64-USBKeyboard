@@ -1,4 +1,5 @@
 #include "Engine.h"
+#include "BuildStamp.h"
 #include "Keys.h"
 #include "Fitted.h"
 #include "Fmt.h"

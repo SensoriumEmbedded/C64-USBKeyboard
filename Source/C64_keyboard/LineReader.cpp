@@ -1,4 +1,5 @@
 #include "LineReader.h"
+#include "BuildStamp.h"
 
 LineReader::Result LineReader::Feed(uint8_t c, uint64_t NowUs)
 {

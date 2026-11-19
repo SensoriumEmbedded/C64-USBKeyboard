@@ -1,4 +1,5 @@
 #include "PhysKeys.h"
+#include "BuildStamp.h"
 #include "C64keyboard.h"   // KeyCodeToC64Map
 #include "Keys.h"
 

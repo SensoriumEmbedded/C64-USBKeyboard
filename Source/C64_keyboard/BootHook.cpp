@@ -8,6 +8,7 @@
 */
 #include <Arduino.h>
 #include "Matrix.h"
+#include "BuildStamp.h"
 #include "Outputs.h"
 
 extern "C" void UsbNames_AppendChipId(void);

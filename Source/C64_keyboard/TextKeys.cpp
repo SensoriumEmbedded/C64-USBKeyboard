@@ -3,6 +3,7 @@
   Docs/Host_Protocol.md ("Typed text").
 */
 #include "TextKeys.h"
+#include "BuildStamp.h"
 #include "Keys.h"
 #include "Fmt.h"
 #include <string.h>

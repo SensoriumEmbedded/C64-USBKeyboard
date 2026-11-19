@@ -1,4 +1,5 @@
 #include "Fmt.h"
+#include "BuildStamp.h"
 #include <string.h>
 
 static char Lower(char c) { return (c >= 'A' && c <= 'Z') ? (char)(c - 'A' + 'a') : c; }
