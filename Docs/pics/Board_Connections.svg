@@ -1,0 +1,185 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 676" width="1000" height="676" role="img" aria-labelledby="title desc">
+  <title id="title">C64-USBKeyboard connections</title>
+  <desc id="desc">The board sits inside the C64. Its Teensy takes USB serial from a PC on its micro-USB port and a USB keyboard on the PCB's USB host connector. On the PCB it drives the MT8808 crosspoint and Q1, which reach the C64's keyboard matrix and RESTORE through J2, and it takes +5 V from the C64 through J2. The C64's own keyboard can sit on J2's long pins. Flying leads, each optional: pin 24 through a 2N3904 to /RESET, pin 25 to the TOD line, pins 26 and 27 to a Kawari's J1 and CRESET_N pads, pins 28 and 32 to the ALT and menu buttons of the TeensyROM in the expansion port.</desc>
+  <style>
+    .bg { fill: #ffffff; }
+    .box { fill: #f6f8fa; stroke: #8c959f; stroke-width: 1.2; }
+    .inner { fill: #ffffff; stroke: #afb8c1; stroke-width: 1; }
+    text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif; font-size: 12.5px; fill: #1f2328; }
+    .t { font-size: 14.5px; font-weight: 600; }
+    .s { font-size: 11.5px; fill: #59636e; }
+    .m { font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace; font-size: 11.5px; fill: #1f2328; }
+    .c { text-anchor: middle; }
+    .e { text-anchor: end; }
+    .usb { stroke: #0969da; stroke-width: 2.4; fill: none; }
+    .pwr { stroke: #9a6700; stroke-width: 2.4; fill: none; }
+    .sig { stroke: #424a53; stroke-width: 1.8; fill: none; }
+    .lead { stroke: #1a7f37; stroke-width: 2; fill: none; }
+    .plug { stroke: #424a53; stroke-width: 9; fill: none; }
+    .core { stroke: #f6f8fa; stroke-width: 3.5; fill: none; }
+    .opt { stroke-dasharray: 6 4; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d1117; }
+      .box { fill: #161b22; stroke: #6e7681; }
+      .inner { fill: #0d1117; stroke: #484f58; }
+      text, .m { fill: #e6edf3; }
+      .s { fill: #9198a1; }
+      .usb { stroke: #4493f8; }
+      .pwr { stroke: #d29922; }
+      .sig { stroke: #b7bdc8; }
+      .lead { stroke: #3fb950; }
+      .plug { stroke: #b7bdc8; }
+      .core { stroke: #161b22; }
+    }
+  </style>
+
+  <rect class="bg" x="0" y="0" width="1000" height="676" rx="10"/>
+
+  <!-- outside the C64: the host and a USB keyboard -->
+  <rect class="box" x="16" y="210" width="140" height="80" rx="8"/>
+  <text class="t c" x="86" y="236">PC</text>
+  <text class="s c" x="86" y="255">host protocol over</text>
+  <text class="s c" x="86" y="271">USB serial</text>
+
+  <rect class="box" x="16" y="312" width="140" height="50" rx="8"/>
+  <text class="t c" x="86" y="334">USB keyboard</text>
+  <text class="s c" x="86" y="352">any</text>
+
+  <!-- the C64 -->
+  <rect class="box" x="180" y="16" width="750" height="626" rx="10"/>
+  <text class="t" x="194" y="39">C64</text>
+
+  <!-- the PCB, on the C64's keyboard connector -->
+  <rect class="box" x="200" y="56" width="400" height="572" rx="8"/>
+  <text class="t" x="212" y="77">The PCB</text>
+
+  <rect class="inner" x="220" y="90" width="150" height="526" rx="6"/>
+  <text class="t c" x="295" y="112">Teensy 3.6/4.1</text>
+  <text class="s c" x="295" y="128">VUSB–VIN cut</text>
+
+  <path class="usb" d="M156,250 H220"/>
+  <text class="s" x="228" y="246">micro-USB</text>
+  <path class="usb" d="M156,336 H220"/>
+  <text class="s" x="228" y="331">USB host</text>
+  <text class="s" x="228" y="351">connector</text>
+
+  <!-- pin labels, on the Teensy's right edge -->
+  <text class="s e" x="362" y="152">pins 0, 2–8, 10</text>
+  <text class="s e" x="362" y="218">pin 1</text>
+  <text class="s e" x="362" y="284">VIN</text>
+  <text class="s e" x="362" y="370">pin 24</text>
+  <text class="s e" x="362" y="427">pin 25</text>
+  <text class="s e" x="362" y="498">pin 26</text>
+  <text class="s e" x="362" y="518">pin 27</text>
+  <text class="s e" x="362" y="584">pin 28</text>
+  <text class="s e" x="362" y="608">pin 32</text>
+
+  <!-- on the PCB: the crosspoint, Q1, J2 -->
+  <rect class="inner" x="400" y="120" width="110" height="56" rx="5"/>
+  <text class="c" x="455" y="144">MT8808</text>
+  <text class="s c" x="455" y="162">8×8 crosspoint</text>
+  <path class="plug" d="M370,148 H400"/>
+  <path class="core" d="M370,148 H400"/>
+  <path class="plug" d="M510,148 H540"/>
+  <path class="core" d="M510,148 H540"/>
+
+  <rect class="inner" x="400" y="196" width="110" height="36" rx="5"/>
+  <text class="c" x="455" y="219">Q1: RESTORE</text>
+  <path class="sig" d="M370,214 H400"/>
+  <path class="sig" d="M510,214 H540"/>
+
+  <rect class="inner" x="540" y="110" width="90" height="190" rx="6"/>
+  <text class="t c" x="585" y="134">J2</text>
+  <text class="s c" x="585" y="154">to the</text>
+  <text class="s c" x="585" y="169">keyboard</text>
+  <text class="s c" x="585" y="184">connector</text>
+  <text class="s c" x="585" y="232">long pins:</text>
+  <text class="s c" x="585" y="247">the C64's</text>
+  <text class="s c" x="585" y="262">keyboard</text>
+  <text class="s c" x="585" y="277">fits on top</text>
+
+  <path class="pwr" d="M540,280 H370"/>
+  <text class="s c" x="455" y="272">+5 V from the C64</text>
+
+  <!-- the C64's own keyboard, on J2's long pins -->
+  <rect class="inner" style="stroke-dasharray:6 4" x="720" y="236" width="190" height="50" rx="6"/>
+  <text class="c" x="815" y="257">C64 keyboard</text>
+  <text class="s c" x="815" y="275">on J2's long pins</text>
+  <path class="plug" style="stroke-dasharray:10 6" d="M630,255 H720"/>
+  <path class="core" style="stroke-dasharray:10 6" d="M630,255 H720"/>
+
+  <!-- the C64's side of each connection -->
+  <rect class="inner" x="720" y="150" width="190" height="64" rx="5"/>
+  <text class="c" x="815" y="171">Keyboard connector (CN1)</text>
+  <text class="s c" x="815" y="188">matrix, RESTORE,</text>
+  <text class="s c" x="815" y="203">+5 V, GND</text>
+  <path class="plug" d="M630,182 H720"/>
+  <path class="core" d="M630,182 H720"/>
+  <text class="s c" x="675" y="170">plugs onto</text>
+
+  <rect class="inner" style="stroke-dasharray:6 4" x="720" y="344" width="190" height="44" rx="5"/>
+  <text class="c" x="815" y="362">/RESET</text>
+  <text class="s c" x="815" y="379">user port pin 3</text>
+
+  <rect class="inner" style="stroke-dasharray:6 4" x="720" y="402" width="190" height="44" rx="5"/>
+  <text class="c" x="815" y="420">TOD line</text>
+  <text class="s c" x="815" y="437">250425: U27 pin 8 cut</text>
+
+  <rect class="inner" style="stroke-dasharray:6 4" x="720" y="460" width="190" height="68" rx="5"/>
+  <text class="c" x="815" y="478">VIC-II Kawari</text>
+  <text class="s c" x="815" y="498">J1 signal pad</text>
+  <text class="s c" x="815" y="518">RST (CRESET_N) pad</text>
+
+  <!-- the TeensyROM, half in the expansion port -->
+  <rect class="box" style="stroke-dasharray:6 4" x="830" y="540" width="154" height="84" rx="8"/>
+  <text class="t c" x="907" y="560">TeensyROM</text>
+  <text class="s c" x="907" y="584">ALT button</text>
+  <text class="s c" x="907" y="608">menu button</text>
+
+  <!-- flying leads, each optional -->
+  <text class="s" x="382" y="316">flying leads, each optional;</text>
+  <text class="s" x="382" y="331">mark it fitted once: F &lt;name&gt; 1</text>
+
+  <path class="lead opt" d="M370,366 H620"/>
+  <text class="m" x="382" y="360">F reset</text>
+  <rect class="inner" style="stroke-dasharray:6 4" x="620" y="344" width="80" height="44" rx="5"/>
+  <text class="c" x="660" y="362">2N3904</text>
+  <text class="s c" x="660" y="379">high = reset</text>
+  <path class="lead opt" d="M700,366 H720"/>
+
+  <path class="lead opt" d="M370,423 H720"/>
+  <text class="m" x="382" y="417">F tod</text>
+  <text class="s" x="612" y="417">3.3 V, 50 or 60 Hz</text>
+
+  <path class="lead opt" d="M370,494 H720"/>
+  <text class="m" x="382" y="488">F kawari</text>
+  <text class="s" x="612" y="488">open-drain</text>
+
+  <path class="lead opt" d="M370,514 H720"/>
+  <text class="s" x="612" y="510">open-drain</text>
+
+  <path class="lead opt" d="M370,580 H830"/>
+  <text class="m" x="382" y="574">F alt</text>
+  <text class="s" x="612" y="574">open-drain</text>
+
+  <path class="lead opt" d="M370,604 H830"/>
+  <text class="m" x="382" y="598">F menu</text>
+  <text class="s" x="612" y="598">open-drain</text>
+
+  <!-- legend -->
+  <g transform="translate(0,660)">
+    <path class="usb" d="M16,0 H44"/>
+    <text class="s" x="50" y="4">USB</text>
+    <path class="pwr" d="M100,0 H128"/>
+    <text class="s" x="134" y="4">+5 V</text>
+    <path class="sig" d="M186,0 H214"/>
+    <text class="s" x="220" y="4">on the PCB</text>
+    <path class="plug" d="M300,0 H328"/>
+    <path class="core" d="M300,0 H328"/>
+    <text class="s" x="334" y="4">multi-signal</text>
+    <path class="lead opt" d="M412,0 H440"/>
+    <text class="s" x="446" y="4">flying leads</text>
+    <path class="sig opt" d="M534,0 H562"/>
+    <text class="s" x="568" y="4">optional</text>
+  </g>
+</svg>

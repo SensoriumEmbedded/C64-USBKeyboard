@@ -44,6 +44,8 @@ Letters, digits, SPACE, RETURN and `- = ; , . /` type the same C64 key. SHIFT wo
 
 ## External connections
 
+![The board inside the C64: USB serial to a PC and a USB keyboard on the host connector; the matrix, RESTORE and +5 V through J2 onto the keyboard connector (CN1); and optional flying leads to /RESET, the TOD line, a Kawari and the TeensyROM's buttons](Docs/pics/Board_Connections.svg)
+
 The matrix, RESTORE and the LED are on the PCB. These lines are wired off it, and each is optional:
 
 | Function | Teensy pin | Drive | Connects to | `F` name | Used by |
